@@ -12,7 +12,7 @@ target_link_libraries(topo-build-python PRIVATE
 # `analysis/extract/PythonSymbolExtractor.h` is referenced by main.cpp with
 # the `analysis/...` prefix, so the include root is topo-lang-python/topo-check/.
 target_include_directories(topo-build-python PRIVATE
-    ${CMAKE_SOURCE_DIR}/topo-check
+    ${PROJECT_SOURCE_DIR}/topo-check
 )
 topo_set_compiler_flags(topo-build-python)
 

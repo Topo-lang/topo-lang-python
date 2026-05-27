@@ -32,6 +32,19 @@ target_include_directories(TopoPythonAnalysis
 target_link_libraries(TopoPythonAnalysis
     PUBLIC topo::core::TopoCheck TopoPythonLSP
     PRIVATE topo::core::TopoPlatform)
+
+# PythonLSPCallSiteExtractor.cpp / PythonLSPImportExtractor.cpp #include
+# "analysis/extract/CppCallSiteExtractor.h" / "analysis/extract/CppImportExtractor.h"
+# from topo-lang-cpp's source tree. The "analysis/" prefix means we need the
+# PARENT of TopoCppAnalysis's source dir on the include path.
+if(TARGET topo::lang-cpp::TopoCppAnalysis)
+    get_target_property(_cpp_analysis_src
+        topo::lang-cpp::TopoCppAnalysis SOURCE_DIR)
+    if(_cpp_analysis_src)
+        target_include_directories(TopoPythonAnalysis PRIVATE
+            "${_cpp_analysis_src}/..")
+    endif()
+endif()
 # TOPO_SOURCE_DIR is consulted by PythonSafePatterns.cpp for source-tree
 # catalog discovery (the env var TOPO_PATTERNS_DIR takes precedence). The
 # in-source fallback looks for
@@ -42,7 +55,7 @@ target_link_libraries(TopoPythonAnalysis
 set(_TOPO_LANG_PYTHON_SHIM "${CMAKE_BINARY_DIR}/topo-source-shim")
 file(MAKE_DIRECTORY "${_TOPO_LANG_PYTHON_SHIM}")
 if(NOT EXISTS "${_TOPO_LANG_PYTHON_SHIM}/topo-lang-python")
-    file(CREATE_LINK "${CMAKE_SOURCE_DIR}"
+    file(CREATE_LINK "${PROJECT_SOURCE_DIR}"
         "${_TOPO_LANG_PYTHON_SHIM}/topo-lang-python" SYMBOLIC)
 endif()
 target_compile_definitions(TopoPythonAnalysis PRIVATE

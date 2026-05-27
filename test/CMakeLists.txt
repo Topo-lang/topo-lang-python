@@ -21,8 +21,8 @@ target_link_libraries(topo-lang-python-tests PRIVATE
     GTest::gtest_main
 )
 target_include_directories(topo-lang-python-tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/topo-check       # for analysis/stub/PythonStubGenerator.h
-    ${CMAKE_SOURCE_DIR}/topo-transpile   # for PythonEmitter.h
+    ${PROJECT_SOURCE_DIR}/topo-check       # for analysis/stub/PythonStubGenerator.h
+    ${PROJECT_SOURCE_DIR}/topo-transpile   # for PythonEmitter.h
 )
 topo_set_compiler_flags(topo-lang-python-tests)
 gtest_discover_tests(topo-lang-python-tests DISCOVERY_TIMEOUT 30
@@ -50,19 +50,19 @@ if(Python3_FOUND)
     )
     target_compile_definitions(topo-lang-python-extractor-fidelity-tests PRIVATE
         PYTHON_FIDELITY_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/extractor_fidelity"
-        PYTHON_EXTRACTOR_SCRIPT_PATH="${CMAKE_SOURCE_DIR}/topo-check/extractor/topo_extract_python.py"
+        PYTHON_EXTRACTOR_SCRIPT_PATH="${PROJECT_SOURCE_DIR}/topo-check/extractor/topo_extract_python.py"
     )
     topo_set_compiler_flags(topo-lang-python-extractor-fidelity-tests)
     gtest_discover_tests(topo-lang-python-extractor-fidelity-tests DISCOVERY_TIMEOUT 30
         PROPERTIES LABELS "toolchain;lang-python;extractor-fidelity" TIMEOUT 60
-        ENVIRONMENT "TOPO_EXTRACT_ROOT=${CMAKE_SOURCE_DIR}")
+        ENVIRONMENT "TOPO_EXTRACT_ROOT=${PROJECT_SOURCE_DIR}")
 
     # Python *transpile* extractor smoke test — runs the production tool
     # (topo_extract_transpile_python.py) through its real stdin/stdout
     # protocol on small fixtures.
     add_test(NAME topo-extract-python-smoke
         COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/topo-check/extractor/smoke_test.py
+            ${PROJECT_SOURCE_DIR}/topo-check/extractor/smoke_test.py
             -v
     )
     set_tests_properties(topo-extract-python-smoke PROPERTIES

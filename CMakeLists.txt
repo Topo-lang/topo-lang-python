@@ -29,8 +29,12 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(TopoLangPythonCompilerFlags)
 
 # ── Upstream Topo packages ────────────────────────────
-find_package(topo-core CONFIG REQUIRED)
-find_package(topo-lang CONFIG REQUIRED)
+if(NOT TARGET topo::core::TopoBasic)
+    find_package(topo-core CONFIG REQUIRED)
+endif()
+if(NOT TARGET topo::lang::TopoLang)
+    find_package(topo-lang CONFIG REQUIRED)
+endif()
 
 # ── External dependencies ─────────────────────────────
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -59,7 +63,7 @@ add_subdirectory(topo-profile)
 
 # ── Tests ─────────────────────────────────────────────
 option(TOPO_LANG_PYTHON_BUILD_TESTS "Build topo-lang-python tests" ON)
-if(TOPO_LANG_PYTHON_BUILD_TESTS AND PROJECT_IS_TOP_LEVEL)
+if(TOPO_LANG_PYTHON_BUILD_TESTS AND (PROJECT_IS_TOP_LEVEL OR TOPO_META_DRIVING_TESTS))
     enable_testing()
     include(FetchContent)
     FetchContent_Declare(googletest
