@@ -1,0 +1,1 @@
+Calls `getattr(box, "value")` with a literal attribute name. L1 regex cannot distinguish literal vs. dynamic args, so the conservative posture flags every getattr call. Expected: violation (issue #5 — by design).

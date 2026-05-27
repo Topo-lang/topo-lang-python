@@ -1,0 +1,17 @@
+// Multiple purity violations: three parallel functions each write a
+// distinct module global. Verifies that the check reports every
+// violation rather than stopping at the first.
+
+namespace app {
+  public:
+    void run();
+    void producer();
+    void consumer();
+    void sideEffect();
+
+    fn run {
+        stage<1> producer();
+        stage<1> consumer();
+        stage<1> sideEffect();
+    }
+}

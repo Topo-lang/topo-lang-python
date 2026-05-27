@@ -1,0 +1,19 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 8,
+      "col": 8,
+      "callee": "super.setup",
+      "caller": "Child.setup"
+    },
+    {
+      "file": "input.py",
+      "line": 8,
+      "col": 8,
+      "callee": "super",
+      "caller": "Child.setup"
+    }
+  ],
+  "fileErrors": []
+}

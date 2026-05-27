@@ -1,0 +1,12 @@
+[project]
+name = "containment_safe_code_python"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]
+
+[containment]
+mode = "force"

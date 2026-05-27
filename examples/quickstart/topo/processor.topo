@@ -1,0 +1,37 @@
+// Order processing pipeline declarations
+
+using int = std::python::int;
+using str = std::python::str;
+using float = std::python::float;
+using bool = std::python::bool;
+
+namespace orders {
+  public:
+    type Invoice {
+      float total;
+      str tracking_id;
+    }
+
+    Invoice process_order(int order_id);
+
+  protected:
+    bool validate_order(int order_id);
+    float charge_payment(int order_id, float amount);
+    float calculate_shipping(int order_id);
+    Invoice create_invoice(int order_id, float payment, float shipping);
+
+  private:
+    bool check_inventory(int order_id);
+    bool verify_address(int order_id);
+    float apply_discount(int order_id, float amount);
+    void send_confirmation(Invoice invoice);
+    void update_analytics(Invoice invoice);
+
+  internal:
+    void dump_order_state(int order_id);
+
+  stage<1>: validate_order;
+  stage<2>: charge_payment, calculate_shipping;
+  stage<3>: create_invoice;
+  stage<4>: send_confirmation, update_analytics;
+}

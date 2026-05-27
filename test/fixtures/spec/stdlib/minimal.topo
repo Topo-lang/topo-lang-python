@@ -1,0 +1,25 @@
+// Plan 38 Batch 2.1 — Python host-side fixture for all 6 first-batch
+// stdlib bridging types (bool / i64 / f64 / string / optional<T> / slice<T>).
+//
+// Pairing with minimal.py demonstrates the Python idioms the emitter
+// produces (PEP 604 union for optional, builtin types for scalars,
+// list[T] for slice — see Plan 38 §4 and the PythonEmitter stdlib branch).
+//
+// `boundary` exercises every Batch-1 type in one signature, matching the
+// representative case called out in Plan 38 §7.
+
+namespace stdlib_smoke {
+  public:
+    bool isReady();
+    i64 nextId();
+    f64 averageScore();
+    string label();
+    optional<bool> maybeFlag();
+    slice<f64> samples();
+
+    // All-types-in-one signature — mirrors the Plan 38 §7 acceptance check.
+    optional<i64> boundary(i64 id,
+                           string name,
+                           optional<bool> flags,
+                           slice<f64> values);
+}

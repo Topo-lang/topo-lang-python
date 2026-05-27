@@ -1,0 +1,14 @@
+// Forward stage call would be a violation, but
+// [stage_isolation].mode = "off" suppresses the check.
+
+namespace app {
+  public:
+    void run();
+    void init();
+    void process();
+
+    fn run {
+        stage<1> init();
+        stage<2> process();
+    }
+}

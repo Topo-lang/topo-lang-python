@@ -1,0 +1,12 @@
+[project]
+name = "visibility_python_fail_04"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]
+
+[visibility]
+mode = "force"

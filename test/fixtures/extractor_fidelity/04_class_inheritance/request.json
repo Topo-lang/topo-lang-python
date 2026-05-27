@@ -1,0 +1,4 @@
+{
+  "description": "super().setup() in a derived class — both outer and inner Call nodes should be emitted in pre-order",
+  "files": ["input.py"]
+}

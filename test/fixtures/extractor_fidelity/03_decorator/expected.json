@@ -1,0 +1,12 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 7,
+      "col": 8,
+      "callee": "os.system",
+      "caller": "Thing.bang"
+    }
+  ],
+  "fileErrors": []
+}

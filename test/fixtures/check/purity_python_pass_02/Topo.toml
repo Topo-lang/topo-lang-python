@@ -1,0 +1,12 @@
+[project]
+name = "purity_python_pass_02"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]
+
+[purity]
+mode = "force"

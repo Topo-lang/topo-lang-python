@@ -1,0 +1,58 @@
+{
+  "$schema": "https://www.speedscope.app/file-format-schema.json",
+  "exporter": "py-spy@0.3 (topo Plan 43 T3 C3 fixture)",
+  "name": "py-spy sample for topo-profile sampling e2e",
+  "activeProfileIndex": 0,
+  "shared": {
+    "frames": [
+      {"name": "main",     "file": "app.py",    "line": 10},
+      {"name": "run",      "file": "app.py",    "line": 24},
+      {"name": "compute",  "file": "kernel.py", "line": 42},
+      {"name": "inner",    "file": "kernel.py", "line": 58},
+      {"name": "io_flush", "file": "io.py",     "line": 99},
+      {"name": "work",     "file": "pool.py",   "line": 71}
+    ]
+  },
+  "profiles": [
+    {
+      "type": "sampled",
+      "name": "MainThread",
+      "unit": "milliseconds",
+      "startValue": 0,
+      "endValue": 13,
+      "samples": [
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2],
+        [0, 1, 2],
+        [0, 1, 2],
+        [0, 1, 2],
+        [0, 1, 4],
+        [0, 1, 4],
+        [0, 1, 4],
+        [0, 1, 4]
+      ],
+      "weights": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    },
+    {
+      "type": "sampled",
+      "name": "Worker-0",
+      "unit": "milliseconds",
+      "startValue": 0,
+      "endValue": 7,
+      "samples": [
+        [0, 5, 2, 3],
+        [0, 5, 2, 3],
+        [0, 5, 2],
+        [0, 5, 2],
+        [0, 5, 2],
+        [0, 5, 4],
+        [0, 5, 4]
+      ],
+      "weights": [1, 1, 1, 1, 1, 1, 1]
+    }
+  ]
+}

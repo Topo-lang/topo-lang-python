@@ -1,0 +1,4 @@
+{
+  "description": "Module-level call outside any def/class — caller should be the synthetic '<module>' marker",
+  "files": ["input.py"]
+}

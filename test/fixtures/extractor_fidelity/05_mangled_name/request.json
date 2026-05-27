@@ -1,0 +1,4 @@
+{
+  "description": "Dangerous __class__ introspection — dunder access is treated as a synthetic call site",
+  "files": ["input.py"]
+}

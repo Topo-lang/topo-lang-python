@@ -1,0 +1,19 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 5,
+      "col": 13,
+      "callee": "os.path.basename",
+      "caller": "list_files"
+    },
+    {
+      "file": "input.py",
+      "line": 5,
+      "col": 42,
+      "callee": "os.listdir",
+      "caller": "list_files"
+    }
+  ],
+  "fileErrors": []
+}

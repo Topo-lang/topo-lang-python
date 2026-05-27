@@ -1,0 +1,12 @@
+// Visibility mismatch — .topo says public but Python uses _private naming.
+
+using int = std::python::int;
+
+namespace app {
+  public:
+    type Service {
+      public:
+        int process(int x);
+        int _internal_helper(int x);
+    }
+}

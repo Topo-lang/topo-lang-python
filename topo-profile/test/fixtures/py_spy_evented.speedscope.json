@@ -1,0 +1,26 @@
+{
+  "$schema": "https://www.speedscope.app/file-format-schema.json",
+  "exporter": "topo Plan 43 T3 C3 evented-rejection fixture",
+  "name": "minimal evented profile — must be rejected by the sampled-only converter",
+  "shared": {
+    "frames": [
+      {"name": "main", "file": "app.py", "line": 1},
+      {"name": "work", "file": "app.py", "line": 5}
+    ]
+  },
+  "profiles": [
+    {
+      "type": "evented",
+      "name": "trace",
+      "unit": "milliseconds",
+      "startValue": 0,
+      "endValue": 10,
+      "events": [
+        {"type": "O", "at": 0, "frame": 0},
+        {"type": "O", "at": 1, "frame": 1},
+        {"type": "C", "at": 5, "frame": 1},
+        {"type": "C", "at": 10, "frame": 0}
+      ]
+    }
+  ]
+}

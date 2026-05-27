@@ -1,0 +1,38 @@
+// Python counterpart of topo-lang-cpp/topo-debug/test/fixtures/project_simple/main.topo.
+//
+// Declares a `Buf` debug entry with literal-bounded views `first_half` and
+// `second_half` over the host-side `data` (a Python list of ints, length 8).
+// The matching main.py defines the list inside `main()` as
+// [1,2,3,4,10,20,30,40] and breaks on a sentinel line so
+// `topo debug query 'sum(first_half)'` sees 1+2+3+4 = 10 and
+// `sum(second_half)` sees 10+20+30+40 = 100.
+//
+// Validates the full success path for the Python check-only backend:
+// `topo build` (via topo-build-python) runs the completeness check and
+// emits main.topo-dbg.json (the view registry) so `topo debug` can be
+// pointed at it via --debug-meta. `--target` for the adapter is main.py
+// itself; debugpy launches the script with --wait-for-client, hits the
+// breakpoint, and the adapter packs `data` into raw little-endian bytes.
+
+using Int = std::python::int;
+
+namespace app {
+  public:
+    type Buf {
+      public:
+        Int data;
+    }
+}
+
+debug Buf {
+  view first_half from data[0..4];
+  view second_half from data[4..8];
+  // Plan 45 Phase 1 — `{ <query-expr> }` placeholders are evaluated by the
+  // summary renderer against the breakpoint's frame. At the sentinel line
+  // in main.py:
+  //   sum(data)        = 110  (1+2+3+4 + 10+20+30+40)
+  //   sum(first_half)  = 10
+  //   sum(second_half) = 100
+  //   count(data)      = 8
+  summary "data sum={sum(data)} (halves {sum(first_half)} + {sum(second_half)}; count={count(data)})";
+}

@@ -1,0 +1,4 @@
+{
+  "description": "Type-annotated function using import aliases — imports must be tracked through asname and qualified callees resolved",
+  "files": ["input.py"]
+}

@@ -1,0 +1,37 @@
+#!/bin/sh
+# Launcher shim so the extractor is resolvable as the bare executable name
+# `topo-extract-python` (TranspileDriver spawns it via PATH, the same way
+# it spawns the compiled topo-extract-cpp / topo-extract-rust binaries
+# and the topo-extract-typescript launcher).
+#
+# Sister tool note: the file `topo_extract_python.py` next to this shim is
+# the *L2 containment* extractor with a completely different protocol
+# (argv-driven, emits callSites). The transpile extractor (this shim's
+# target) is `topo_extract_transpile_python.py`. Both files coexist in
+# this directory; only the launcher names overlap (the launcher resolves
+# to the transpile script).
+#
+# Resolve our own real directory through any symlinks, then dispatch.
+self=$0
+while [ -h "$self" ]; do
+    link=$(readlink "$self")
+    case $link in
+        /*) self=$link ;;
+        *)  self=$(dirname "$self")/$link ;;
+    esac
+done
+dir=$(cd "$(dirname "$self")" && pwd)
+
+# Prefer python3 explicitly; the script targets the Python 3.10+ ast surface
+# (PEP 695 type-params handled defensively via getattr, so 3.10/3.11 are
+# fine — newer features just don't appear on those ast nodes).
+PY=${PYTHON3:-python3}
+
+# Two valid layouts:
+#   1. Staged beside a binary: this shim sits in <binDir>/ and the script
+#      is in <binDir>/topo-extract-python-tool/.
+#   2. In-tree / inside the source dir: script is right next to this shim.
+if [ -f "$dir/topo-extract-python-tool/topo_extract_transpile_python.py" ]; then
+    exec "$PY" "$dir/topo-extract-python-tool/topo_extract_transpile_python.py" "$@"
+fi
+exec "$PY" "$dir/topo_extract_transpile_python.py" "$@"

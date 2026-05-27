@@ -1,0 +1,14 @@
+// Purity violation: parallel stage functions use compound assignment
+// on a module global.
+
+namespace app {
+  public:
+    void run();
+    void tick();
+    void monitor();
+
+    fn run {
+        stage<1> tick();
+        stage<1> monitor();
+    }
+}

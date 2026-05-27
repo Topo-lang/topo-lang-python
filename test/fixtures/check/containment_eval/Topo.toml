@@ -1,0 +1,12 @@
+[project]
+name = "containment_eval"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]
+
+[containment]
+mode = "force"

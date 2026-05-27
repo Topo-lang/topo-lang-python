@@ -1,0 +1,14 @@
+[project]
+name = "python_completeness_pass"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src"]
+output = "build/out"
+output_type = "exe"
+
+[builder]
+mode = "dev"

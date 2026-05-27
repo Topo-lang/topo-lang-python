@@ -1,0 +1,4 @@
+{
+  "description": "Call embedded inside an f-string FormattedValue — Python 3.12+ source position reporting must be honoured",
+  "files": ["input.py"]
+}

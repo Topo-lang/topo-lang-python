@@ -1,0 +1,12 @@
+[project]
+name = "containment_python_wildcard_import_os"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]
+
+[containment]
+mode = "force"

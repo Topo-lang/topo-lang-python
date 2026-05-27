@@ -1,0 +1,15 @@
+[project]
+name = "project_multi_python"
+
+[topo]
+root = "main.topo"
+
+[build]
+language = "python"
+sources = ["main.py"]
+output = "main"
+output_type = "exe"
+
+[completeness]
+ignore_constructors = true
+ignore_main = true

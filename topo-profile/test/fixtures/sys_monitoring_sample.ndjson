@@ -1,0 +1,15 @@
+# Plan 43 — hand-curated PEP 669 sys.monitoring PY_START/PY_RETURN snapshot
+# (single thread, 4 nested calls) so CTest does not depend on a live
+# Python 3.12+ interpreter. Function names mirror declared stage-boundary
+# calls (stage_load / stage_transform) so the converter's flattened
+# `<module>.<function>:<line>` frames demonstrate declaration join.
+# Expected: 4 samples, 4 unique stacks, 1 thread, source_format
+# "py_sys_monitoring".
+{"event_type":"py_start","ts_ns":1000,"thread":{"id":1,"name":"MainThread"},"frame":{"module":"app.py","function":"main","line":1}}
+{"event_type":"py_start","ts_ns":1100,"thread":{"id":1,"name":"MainThread"},"frame":{"module":"app.py","function":"compute","line":10}}
+{"event_type":"py_start","ts_ns":1200,"thread":{"id":1,"name":"MainThread"},"frame":{"module":"app.py","function":"stage_load","line":20}}
+{"event_type":"py_return","ts_ns":1500,"thread":{"id":1,"name":"MainThread"},"frame":{"module":"app.py","function":"stage_load","line":20}}
+{"event_type":"py_start","ts_ns":1600,"thread":{"id":1,"name":"MainThread"},"frame":{"module":"app.py","function":"stage_transform","line":30}}
+{"event_type":"py_return","ts_ns":2000,"thread":{"id":1,"name":"MainThread"},"frame":{"module":"app.py","function":"stage_transform","line":30}}
+{"event_type":"py_return","ts_ns":2100,"thread":{"id":1,"name":"MainThread"},"frame":{"module":"app.py","function":"compute","line":10}}
+{"event_type":"py_return","ts_ns":2200,"thread":{"id":1,"name":"MainThread"},"frame":{"module":"app.py","function":"main","line":1}}

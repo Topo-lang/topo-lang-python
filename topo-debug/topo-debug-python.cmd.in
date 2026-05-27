@@ -1,0 +1,3 @@
+@echo off
+REM topo-debug-python launcher (Windows). Configured by CMake.
+"@Python3_EXECUTABLE@" "@TOPO_DEBUG_PYTHON_MAIN@" %*

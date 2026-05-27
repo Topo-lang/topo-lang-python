@@ -1,0 +1,15 @@
+// Purity violation: parallel stage function writes to a module-level
+// list (no explicit global declaration; conservative L1 detects the
+// shared-name write).
+
+namespace app {
+  public:
+    void run();
+    void stepA();
+    void stepB();
+
+    fn run {
+        stage<1> stepA();
+        stage<1> stepB();
+    }
+}

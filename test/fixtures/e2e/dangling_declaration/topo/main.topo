@@ -1,0 +1,9 @@
+// Dangling declaration — .topo declares 'compute' which does not exist in source.
+
+using int = std::python::int;
+
+namespace app {
+  public:
+    int add(int a, int b);
+    int compute(int x);
+}

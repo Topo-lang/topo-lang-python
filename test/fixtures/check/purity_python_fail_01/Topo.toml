@@ -1,0 +1,12 @@
+[project]
+name = "purity_python_fail_01"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]
+
+[purity]
+mode = "force"

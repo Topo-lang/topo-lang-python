@@ -1,0 +1,12 @@
+[project]
+name = "containment_python_yaml_load_unsafe"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]
+
+[containment]
+mode = "force"

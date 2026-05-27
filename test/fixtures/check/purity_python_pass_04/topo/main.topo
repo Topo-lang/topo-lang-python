@@ -1,0 +1,14 @@
+// Even though `compute` and `render` would be impure, [purity].mode = "off"
+// suppresses violations and the check returns 0.
+
+namespace app {
+  public:
+    void run();
+    void compute();
+    void render();
+
+    fn run {
+        stage<1> compute();
+        stage<1> render();
+    }
+}

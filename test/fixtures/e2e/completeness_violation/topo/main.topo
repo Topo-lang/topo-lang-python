@@ -1,0 +1,9 @@
+// Completeness violation — Python source has undeclared symbols.
+// Only 'greet' is declared; 'farewell' exists in source but is not declared.
+
+using str = std::python::str;
+
+namespace app {
+  public:
+    str greet(str name);
+}

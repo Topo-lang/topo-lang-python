@@ -1,0 +1,14 @@
+// Sequential stages: writes to module globals are allowed because the
+// purity check only forbids global writes inside parallel stages.
+
+namespace app {
+  public:
+    void run();
+    void init();
+    void finalize();
+
+    fn run {
+        stage<1> init();
+        stage<2> finalize();
+    }
+}

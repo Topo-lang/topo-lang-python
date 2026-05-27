@@ -1,0 +1,4 @@
+{
+  "description": "async def with await — AsyncFunctionDef scope should attribute the awaited Call to the async function",
+  "files": ["input.py"]
+}

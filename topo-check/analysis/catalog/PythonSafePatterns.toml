@@ -1,0 +1,227 @@
+# topo-lang-python/topo-check/analysis/catalog/PythonSafePatterns.toml
+# Python safety patterns whitelist — community-maintained
+# Non-external functions may only use listed patterns.
+# Unlisted = unsafe by default.
+# Python module separator "." is stored as "::" internally.
+
+[version]
+schema = 1
+
+# Safe Python language constructs
+[constructs]
+safe = [
+    "if", "elif", "else", "for", "while",
+    "try", "except", "finally", "with", "as",
+    "def", "class", "return", "yield", "lambda",
+    "pass", "break", "continue",
+    "import", "from", "raise", "assert", "del",
+    # NOTE: "global" and "nonlocal" intentionally absent — they enable
+    # explicit modification of module-level / enclosing scope state, which
+    # violates purity assumptions (issue #5: dangerous safelist entries).
+    "async", "await",
+    "match", "case",
+]
+
+unsafe = [
+    "exec", "eval", "compile", "__import__",
+]
+
+# Safe stdlib symbols (for L2 LSP-resolved names)
+# Uses "::" separator internally (Python "." maps to "::")
+[stdlib]
+safe = [
+    # --- Builtins ---
+    # NOTE: builtins::print is intentionally absent — it writes to stdout (I/O capability)
+    "builtins::len", "builtins::range", "builtins::enumerate",
+    "builtins::zip", "builtins::map", "builtins::filter", "builtins::sorted",
+    "builtins::reversed", "builtins::any", "builtins::all",
+    "builtins::min", "builtins::max", "builtins::abs", "builtins::sum",
+    "builtins::round", "builtins::divmod", "builtins::pow",
+    "builtins::list", "builtins::dict", "builtins::set", "builtins::tuple",
+    "builtins::frozenset", "builtins::bytes", "builtins::bytearray",
+    "builtins::str", "builtins::int", "builtins::float", "builtins::bool",
+    "builtins::complex",
+    "builtins::type", "builtins::isinstance", "builtins::issubclass",
+    # NOTE: builtins::getattr/setattr/delattr intentionally absent —
+    # they enable dynamic reflection bypass when called with non-literal
+    # attribute names. L1 regex cannot distinguish literal vs. dynamic args,
+    # so we conservatively classify all calls as escape (issue #5).
+    "builtins::hasattr",
+    "builtins::repr", "builtins::ascii", "builtins::chr", "builtins::ord",
+    "builtins::hex", "builtins::oct", "builtins::bin", "builtins::format",
+    "builtins::hash", "builtins::id", "builtins::dir", "builtins::vars",
+    "builtins::callable", "builtins::iter", "builtins::next",
+    "builtins::super", "builtins::object", "builtins::property",
+    "builtins::staticmethod", "builtins::classmethod",
+    "builtins::slice", "builtins::memoryview",
+    "builtins::NotImplemented", "builtins::Ellipsis",
+    "builtins::True", "builtins::False", "builtins::None",
+    "builtins::Exception", "builtins::ValueError", "builtins::TypeError",
+    "builtins::KeyError", "builtins::IndexError", "builtins::AttributeError",
+    "builtins::RuntimeError", "builtins::StopIteration", "builtins::StopAsyncIteration",
+    "builtins::OSError", "builtins::IOError", "builtins::FileNotFoundError",
+    "builtins::NotImplementedError", "builtins::ZeroDivisionError",
+    "builtins::OverflowError", "builtins::ArithmeticError",
+    "builtins::AssertionError", "builtins::LookupError",
+
+    # --- Collections ---
+    "collections::defaultdict", "collections::OrderedDict", "collections::Counter",
+    "collections::namedtuple", "collections::deque",
+    "collections::ChainMap", "collections::UserDict", "collections::UserList",
+    "collections.abc::Mapping", "collections.abc::Sequence", "collections.abc::Set",
+    "collections.abc::MutableMapping", "collections.abc::MutableSequence",
+    "collections.abc::Iterable", "collections.abc::Iterator", "collections.abc::Generator",
+    "collections.abc::Callable", "collections.abc::Hashable",
+
+    # --- Itertools / Functools ---
+    "itertools::chain", "itertools::product", "itertools::permutations",
+    "itertools::combinations", "itertools::combinations_with_replacement",
+    "itertools::repeat", "itertools::cycle", "itertools::count",
+    "itertools::islice", "itertools::starmap", "itertools::compress",
+    "itertools::dropwhile", "itertools::takewhile", "itertools::groupby",
+    "itertools::zip_longest", "itertools::accumulate", "itertools::filterfalse",
+    "itertools::tee", "itertools::pairwise",
+    "functools::reduce", "functools::partial", "functools::lru_cache",
+    "functools::cache", "functools::cached_property", "functools::wraps",
+    "functools::total_ordering", "functools::cmp_to_key", "functools::singledispatch",
+
+    # --- Math ---
+    "math::sqrt", "math::ceil", "math::floor", "math::log", "math::log2", "math::log10",
+    "math::exp", "math::pow", "math::fabs", "math::factorial", "math::gcd", "math::lcm",
+    "math::isnan", "math::isinf", "math::isfinite", "math::isclose",
+    "math::sin", "math::cos", "math::tan", "math::asin", "math::acos", "math::atan", "math::atan2",
+    "math::hypot", "math::degrees", "math::radians",
+    "math::pi", "math::e", "math::inf", "math::nan", "math::tau",
+    "math::comb", "math::perm", "math::prod", "math::trunc", "math::copysign",
+
+    # --- Typing ---
+    "typing::List", "typing::Dict", "typing::Set", "typing::Tuple",
+    "typing::Optional", "typing::Union", "typing::Any", "typing::Type",
+    "typing::Callable", "typing::Iterator", "typing::Generator",
+    "typing::Sequence", "typing::Mapping", "typing::MutableMapping",
+    "typing::ClassVar", "typing::Final", "typing::Literal",
+    "typing::TypeVar", "typing::Generic", "typing::Protocol",
+    "typing::TypeAlias", "typing::TypeGuard", "typing::TypedDict",
+    "typing::NamedTuple", "typing::cast", "typing::overload",
+    "typing::get_type_hints", "typing::no_type_check",
+    "typing::ParamSpec", "typing::Concatenate", "typing::Unpack",
+
+    # --- Dataclasses ---
+    "dataclasses::dataclass", "dataclasses::field", "dataclasses::fields",
+    "dataclasses::asdict", "dataclasses::astuple", "dataclasses::replace",
+    "dataclasses::is_dataclass",
+
+    # --- Enum ---
+    "enum::Enum", "enum::IntEnum", "enum::Flag", "enum::IntFlag",
+    "enum::auto", "enum::unique",
+
+    # --- ABC ---
+    "abc::ABC", "abc::ABCMeta", "abc::abstractmethod",
+
+    # --- String / Text ---
+    "string::ascii_letters", "string::ascii_lowercase", "string::ascii_uppercase",
+    "string::digits", "string::punctuation", "string::whitespace",
+    "string::Template", "string::Formatter",
+    "textwrap::wrap", "textwrap::fill", "textwrap::dedent", "textwrap::indent",
+
+    # --- Regex (in-memory) ---
+    "re::compile", "re::search", "re::match", "re::fullmatch",
+    "re::findall", "re::finditer", "re::sub", "re::subn",
+    "re::split", "re::escape",
+
+    # --- Copy ---
+    "copy::copy", "copy::deepcopy",
+
+    # --- Decimal / Fractions ---
+    "decimal::Decimal", "decimal::getcontext",
+    "fractions::Fraction",
+
+    # --- Statistics ---
+    "statistics::mean", "statistics::median", "statistics::mode",
+    "statistics::stdev", "statistics::variance",
+
+    # --- Random (in-memory, no I/O) ---
+    "random::random", "random::randint", "random::randrange",
+    "random::choice", "random::choices", "random::sample", "random::shuffle",
+    "random::uniform", "random::gauss", "random::seed",
+
+    # --- Datetime (in-memory) ---
+    "datetime::datetime", "datetime::date", "datetime::time",
+    "datetime::timedelta", "datetime::timezone",
+
+    # --- Pathlib (read-only operations) ---
+    "pathlib::Path", "pathlib::PurePath", "pathlib::PurePosixPath",
+    "pathlib::PureWindowsPath",
+
+    # --- JSON (in-memory parsing/serialization) ---
+    "json::loads", "json::dumps",
+
+    # --- Struct (in-memory binary packing) ---
+    "struct::pack", "struct::unpack", "struct::calcsize",
+
+    # --- Base64 (in-memory encoding) ---
+    "base64::b64encode", "base64::b64decode",
+    "base64::urlsafe_b64encode", "base64::urlsafe_b64decode",
+
+    # --- Hashlib (in-memory hashing) ---
+    "hashlib::sha256", "hashlib::sha512", "hashlib::md5",
+    "hashlib::sha1", "hashlib::new",
+
+    # --- Bisect (in-memory) ---
+    "bisect::bisect_left", "bisect::bisect_right", "bisect::insort",
+
+    # --- Heapq (in-memory) ---
+    "heapq::heappush", "heapq::heappop", "heapq::heapify",
+    "heapq::nlargest", "heapq::nsmallest", "heapq::merge",
+
+    # --- Operator (in-memory) ---
+    "operator::itemgetter", "operator::attrgetter", "operator::methodcaller",
+    "operator::add", "operator::sub", "operator::mul", "operator::truediv",
+    "operator::eq", "operator::ne", "operator::lt", "operator::gt",
+
+    # --- Contextlib (in-memory) ---
+    "contextlib::contextmanager", "contextlib::suppress",
+    "contextlib::ExitStack", "contextlib::nullcontext",
+
+    # --- pprint (in-memory formatting) ---
+    # NOTE: pprint::pprint is intentionally absent — it writes to stdout (I/O capability)
+    "pprint::pformat",
+
+    # --- Weakref (in-memory) ---
+    "weakref::ref", "weakref::proxy", "weakref::WeakSet",
+    "weakref::WeakValueDictionary", "weakref::WeakKeyDictionary",
+
+    # --- Warnings (in-memory) ---
+    "warnings::warn", "warnings::filterwarnings",
+
+    # --- Traceback (in-memory inspection) ---
+    "traceback::format_exc", "traceback::format_exception",
+    # NOTE: traceback::print_exc is intentionally absent — it writes to stderr (I/O capability)
+
+    # --- Types (in-memory) ---
+    "types::SimpleNamespace", "types::MappingProxyType",
+    "types::FunctionType", "types::MethodType",
+
+    # --- Asyncio (event loop, no direct I/O) ---
+    "asyncio::run", "asyncio::create_task", "asyncio::gather",
+    "asyncio::wait", "asyncio::sleep", "asyncio::Event",
+    "asyncio::Lock", "asyncio::Semaphore", "asyncio::Queue",
+    "asyncio::Future", "asyncio::ensure_future",
+
+    # --- Threading (synchronization primitives) ---
+    "threading::Lock", "threading::RLock", "threading::Event",
+    "threading::Condition", "threading::Semaphore", "threading::Barrier",
+
+    # --- Queue (in-memory) ---
+    "queue::Queue", "queue::PriorityQueue", "queue::LifoQueue",
+    "queue::SimpleQueue", "queue::Empty", "queue::Full",
+
+    # --- UUID (in-memory generation) ---
+    "uuid::uuid4", "uuid::uuid1", "uuid::UUID",
+
+    # --- CSV (in-memory parsing; actual I/O comes from file handles) ---
+    "csv::reader", "csv::writer", "csv::DictReader", "csv::DictWriter",
+
+    # --- Difflib (in-memory) ---
+    "difflib::unified_diff", "difflib::SequenceMatcher",
+]

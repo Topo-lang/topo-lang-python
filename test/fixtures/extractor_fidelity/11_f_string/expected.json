@@ -1,0 +1,12 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 5,
+      "col": 17,
+      "callee": "os.getcwd",
+      "caller": "banner"
+    }
+  ],
+  "fileErrors": []
+}

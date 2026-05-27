@@ -1,0 +1,15 @@
+[project]
+name = "python_quickstart"
+
+[topo]
+root = "topo/processor.topo"
+
+[build]
+language = "python"
+sources = ["src"]
+output = "dist"
+output_type = "exe"
+
+[completeness]
+ignore_constructors = true
+ignore_main = true

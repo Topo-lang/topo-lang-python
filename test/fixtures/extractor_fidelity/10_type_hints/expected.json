@@ -1,0 +1,26 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 6,
+      "col": 8,
+      "callee": "subprocess.Popen",
+      "caller": "launch"
+    },
+    {
+      "file": "input.py",
+      "line": 7,
+      "col": 11,
+      "callee": "os.path.join.find",
+      "caller": "launch"
+    },
+    {
+      "file": "input.py",
+      "line": 7,
+      "col": 11,
+      "callee": "os.path.join",
+      "caller": "launch"
+    }
+  ],
+  "fileErrors": []
+}

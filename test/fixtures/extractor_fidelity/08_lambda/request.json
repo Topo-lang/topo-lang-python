@@ -1,0 +1,4 @@
+{
+  "description": "Lambda inside a function body — lambda does not push a scope, so the inner call belongs to the enclosing def",
+  "files": ["input.py"]
+}

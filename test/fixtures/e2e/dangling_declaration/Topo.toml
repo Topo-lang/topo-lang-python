@@ -1,0 +1,14 @@
+[project]
+name = "python_dangling_declaration"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src"]
+output = "build/out"
+output_type = "exe"
+
+[builder]
+mode = "dev"

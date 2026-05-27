@@ -1,0 +1,5 @@
+namespace app {
+  public:
+    external integer run_command(integer code);
+    integer process(integer x);
+}

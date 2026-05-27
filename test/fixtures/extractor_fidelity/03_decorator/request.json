@@ -1,0 +1,4 @@
+{
+  "description": "@staticmethod decorator must not add a phantom call site; body call is still attributed to the method",
+  "files": ["input.py"]
+}

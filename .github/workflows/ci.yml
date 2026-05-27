@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel in-flight runs on the same ref when a new push lands.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pin the upstream topo-core / topo-lang refs this build is tested against.
+  # Bump whenever a new compatible tag ships.
+  TOPO_CORE_REF: main
+  TOPO_LANG_REF: main
+
+jobs:
+  build-and-test:
+    name: build + test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps (linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build
+
+      - name: Install build deps (macos)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Set up Python 3 (for extractor + extractor-smoke suites)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Export GHA cache env (for vcpkg x-gha backend)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+            core.exportVariable('ACTIONS_RESULTS_URL', process.env.ACTIONS_RESULTS_URL || '');
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          # Matches the `builtin-baseline` pinned in vcpkg.json. Bump both
+          # together when refreshing the vcpkg snapshot.
+          vcpkgGitCommitId: "56bb2411609227288b70117ead2c47585ba07713"
+
+      # Cache the upstream Topo install (topo-core + topo-lang) so PRs
+      # don't re-build them every time. Keyed on the two pinned refs so
+      # bumping invalidates the cache.
+      - name: Cache upstream topo install
+        id: topo-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/topo-install
+          key: topo-core-${{ env.TOPO_CORE_REF }}-lang-${{ env.TOPO_LANG_REF }}-${{ matrix.os }}-v3
+
+      - name: Build & install topo-core (zero-LLVM, lang-less)
+        if: steps.topo-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "${TOPO_CORE_REF}" \
+              https://github.com/topo-lang/topo-core.git \
+              "${RUNNER_TEMP}/topo-core-src"
+          cmake -S "${RUNNER_TEMP}/topo-core-src" \
+                -B "${RUNNER_TEMP}/topo-core-build" \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+                -DTOPO_ENABLE_LLVM=OFF
+          cmake --build "${RUNNER_TEMP}/topo-core-build" --target install
+
+      - name: Build & install topo-lang
+        if: steps.topo-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "${TOPO_LANG_REF}" \
+              https://github.com/topo-lang/topo-lang.git \
+              "${RUNNER_TEMP}/topo-lang-src"
+          cmake -S "${RUNNER_TEMP}/topo-lang-src" \
+                -B "${RUNNER_TEMP}/topo-lang-build" \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+          cmake --build "${RUNNER_TEMP}/topo-lang-build" --target install
+
+      # Re-install topo-core to flip TOPO_CORE_WITH_LANG ON now that
+      # topo-lang is discoverable in the prefix. This wires lib/Build +
+      # lib/Transpile into the topo-core install set.
+      - name: Re-install topo-core (with-lang)
+        if: steps.topo-cache.outputs.cache-hit != 'true'
+        run: |
+          cmake -S "${RUNNER_TEMP}/topo-core-src" \
+                -B "${RUNNER_TEMP}/topo-core-build" \
+                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install"
+          cmake --build "${RUNNER_TEMP}/topo-core-build" --target install
+
+      - name: Configure topo-lang-python
+        run: |
+          cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install" \
+              -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+              -DTOPO_LANG_PYTHON_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 120
+
+      # Smoke test: install topo-lang-python, then verify a downstream
+      # find_package(topo-lang-python CONFIG REQUIRED) resolves and links
+      # cleanly against the topo::lang-python::TopoPythonAnalysis target.
+      - name: Install topo-lang-python
+        run: cmake --install build --prefix "${RUNNER_TEMP}/lang-python-install"
+
+      - name: find_package smoke
+        run: |
+          mkdir -p "${RUNNER_TEMP}/find-package-smoke"
+          cd "${RUNNER_TEMP}/find-package-smoke"
+          cat > vcpkg.json <<'JSON'
+          {
+            "name": "topo-lang-python-smoke",
+            "version-string": "0.0.1",
+            "builtin-baseline": "56bb2411609227288b70117ead2c47585ba07713",
+            "dependencies": ["nlohmann-json", "tomlplusplus"]
+          }
+          JSON
+          cat > CMakeLists.txt <<'CMAKE'
+          cmake_minimum_required(VERSION 3.20)
+          project(lang-python-find-package-smoke LANGUAGES CXX)
+          set(CMAKE_CXX_STANDARD 17)
+          find_package(topo-lang-python CONFIG REQUIRED)
+          add_executable(smoke smoke.cpp)
+          target_link_libraries(smoke PRIVATE topo::lang-python::TopoPythonAnalysis)
+          # MinGW on GHA: cached upstream topo-install was linked against
+          # a different libstdc++ ABI than C:\mingw64\bin currently
+          # provides, so the dynamically-linked smoke binary either
+          # segfaults or fails at startup. Static-link runtime so the
+          # downstream binary is hermetic.
+          if(MINGW)
+              target_link_options(smoke PRIVATE -static -static-libgcc -static-libstdc++)
+          endif()
+          CMAKE
+          cat > smoke.cpp <<'CPP'
+          #include "stub/PythonStubGenerator.h"
+          #include <cstdio>
+          int main() {
+              topo::check::PythonStubGenerator gen;
+              auto result = gen.stubFunction("/nonexistent/path.py", "missing_fn");
+              std::printf("topo-lang-python find_package OK: stub success=%d\n",
+                          result.success ? 1 : 0);
+              return 0;
+          }
+          CPP
+          cmake -S . -B build -G Ninja \
+              -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/lang-python-install;${RUNNER_TEMP}/topo-install" \
+              -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+          cmake --build build
+          ./build/smoke

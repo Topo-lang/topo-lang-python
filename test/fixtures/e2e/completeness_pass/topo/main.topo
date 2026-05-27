@@ -1,0 +1,18 @@
+// Completeness pass — all symbols declared, all match.
+
+using int = std::python::int;
+using str = std::python::str;
+using float = std::python::float;
+
+namespace app {
+  public:
+    type Calculator {
+      public:
+        int add(int a, int b);
+        int subtract(int a, int b);
+      private:
+        void _reset();
+    }
+
+    str greet(str name);
+}

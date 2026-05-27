@@ -1,0 +1,28 @@
+// Nested classes — verifies Python class nesting maps to Topo namespaces.
+
+using int = std::python::int;
+using str = std::python::str;
+
+namespace app {
+  public:
+    type Outer {
+      public:
+        void run();
+    }
+
+  namespace Outer {
+    public:
+      type Inner {
+        public:
+          int compute(int x);
+      }
+
+    namespace Inner {
+      public:
+        type Deep {
+          public:
+            str name();
+        }
+    }
+  }
+}

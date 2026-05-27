@@ -1,0 +1,4 @@
+namespace app {
+  public:
+    integer read_config(integer key);
+}

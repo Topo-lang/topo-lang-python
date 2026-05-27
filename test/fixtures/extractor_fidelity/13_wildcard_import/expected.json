@@ -1,0 +1,19 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 5,
+      "col": 4,
+      "callee": "system",
+      "caller": "danger"
+    },
+    {
+      "file": "input.py",
+      "line": 5,
+      "col": 4,
+      "callee": "os.system",
+      "caller": "danger"
+    }
+  ],
+  "fileErrors": []
+}

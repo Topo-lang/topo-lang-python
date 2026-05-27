@@ -1,0 +1,12 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 6,
+      "col": 8,
+      "callee": "os.system",
+      "caller": "Runner.execute"
+    }
+  ],
+  "fileErrors": []
+}

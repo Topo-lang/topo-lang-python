@@ -1,0 +1,15 @@
+// Stage isolation violation: stage<1> function `init` calls stage<2>
+// function `process` at the host-code level. This is a forward stage
+// dependency.
+
+namespace app {
+  public:
+    void run();
+    void init();
+    void process();
+
+    fn run {
+        stage<1> init();
+        stage<2> process();
+    }
+}

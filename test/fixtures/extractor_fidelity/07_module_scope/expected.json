@@ -1,0 +1,12 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 3,
+      "col": 0,
+      "callee": "os.getcwd",
+      "caller": "<module>"
+    }
+  ],
+  "fileErrors": []
+}

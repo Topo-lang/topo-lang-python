@@ -1,0 +1,4 @@
+{
+  "description": "`from os import *` — bare call must emit both the raw form and a 'os.<name>' wildcard-rescue candidate",
+  "files": ["input.py"]
+}

@@ -1,0 +1,4 @@
+{
+  "description": "List comprehension with two call sites — elt Call is visited before the generator iter Call",
+  "files": ["input.py"]
+}

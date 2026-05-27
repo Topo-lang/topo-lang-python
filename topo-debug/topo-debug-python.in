@@ -1,0 +1,7 @@
+#!/bin/sh
+# topo-debug-python launcher (build-tree). Configured by CMake to invoke the
+# Python adapter under the interpreter that CMake found at configure time.
+#
+# The `topo debug query ... --adapter ${this_script}` CLI spawns this with
+# the adapter arguments; we forward them verbatim.
+exec "@Python3_EXECUTABLE@" "@TOPO_DEBUG_PYTHON_MAIN@" "$@"

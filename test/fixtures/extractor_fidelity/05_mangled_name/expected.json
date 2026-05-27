@@ -1,0 +1,12 @@
+{
+  "callSites": [
+    {
+      "file": "input.py",
+      "line": 2,
+      "col": 12,
+      "callee": "__class__",
+      "caller": "inspect_target"
+    }
+  ],
+  "fileErrors": []
+}

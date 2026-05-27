@@ -1,0 +1,23 @@
+// Cross-namespace private call would be a violation, but
+// [visibility].mode = "off" suppresses the check.
+
+namespace app {
+  public:
+    void run();
+    void compute();
+
+  private:
+    void helper();
+}
+
+namespace other {
+  public:
+    void invoke();
+}
+
+namespace app {
+  public:
+    fn run {
+        stage<1> compute();
+    }
+}

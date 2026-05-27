@@ -1,0 +1,12 @@
+[project]
+name = "containment_python_external_class_method_ok"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]
+
+[containment]
+mode = "force"

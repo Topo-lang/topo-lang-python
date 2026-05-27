@@ -1,0 +1,4 @@
+{
+  "description": "Nested function definitions — caller attribution must flip between inner and outer as scopes push and pop",
+  "files": ["input.py"]
+}

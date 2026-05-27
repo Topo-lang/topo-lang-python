@@ -1,0 +1,35 @@
+// Python counterpart of topo-lang-cpp/topo-debug/test/fixtures/project_multi/main.topo.
+//
+// Two host lists in scope (`a`, `b`, both length 4) — the summary template
+// references both, so resolving it exercises the multi-var adapter protocol
+// (Plan 41 Phase 4) and the batched-summary single-spawn path (Plan 45 §1).
+//
+// Validates the full topo-build-python flow + debugpy multi-var queries:
+// `topo build` runs completeness check + writes main.topo-dbg.json (the view
+// registry); `topo debug` reads it via --debug-meta. Each adapter spawn
+// passes `--var a,b`; the debugpy side reads both locals from the same
+// stopped frame.
+
+using Int = std::python::int;
+
+namespace app {
+  public:
+    type TwoArrays {
+      public:
+        Int a;
+        Int b;
+    }
+}
+
+debug TwoArrays {
+  view first from a[0..2];
+  view second from b[2..4];
+  // Placeholders resolve to host locals `a` and `b` directly (binary arith
+  // on the values is evaluated by the query engine, not the adapter).
+  // At the breakpoint in main.py:
+  //   sum(a)              = 10   (1+2+3+4)
+  //   sum(b)              = 100  (10+20+30+40)
+  //   sum(a) + sum(b)     = 110
+  //   max(b) - max(a)     = 36   (40 - 4)
+  summary "a={sum(a)}, b={sum(b)}, total={sum(a) + sum(b)}, span={max(b) - max(a)}";
+}

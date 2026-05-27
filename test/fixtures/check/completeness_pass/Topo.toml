@@ -1,0 +1,9 @@
+[project]
+name = "completeness_python_pass"
+
+[topo]
+root = "topo/main.topo"
+
+[build]
+language = "python"
+sources = ["src/*.py"]

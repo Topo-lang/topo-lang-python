@@ -1,0 +1,4 @@
+namespace app {
+  public:
+    integer fetch_data(integer endpoint);
+}

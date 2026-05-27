@@ -1,0 +1,9 @@
+// no_verify — this file intentionally mismatches source.
+// With no_verify = true, the backend should skip all checks.
+
+using int = std::python::int;
+
+namespace app {
+  public:
+    int nonexistent_function();
+}

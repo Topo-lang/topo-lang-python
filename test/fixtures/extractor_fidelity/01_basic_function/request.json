@@ -1,0 +1,4 @@
+{
+  "description": "Top-level functions with pure arithmetic — no external call sites should be emitted",
+  "files": ["input.py"]
+}

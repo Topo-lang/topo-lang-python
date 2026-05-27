@@ -1,0 +1,4 @@
+namespace Renderer {
+  public:
+    external integer render(integer id);
+}

@@ -1,0 +1,22 @@
+// A class method with private dunder-style naming is referenced from
+// another module. The .topo declaration uses `private:` for `secret_op`
+// to assert that only same-namespace callers may reach it.
+
+namespace storage {
+  public:
+    void run();
+    void put();
+
+  private:
+    void secret_op();
+
+  public:
+    fn run {
+        stage<1> put();
+    }
+}
+
+namespace probe {
+  public:
+    void leak();
+}
