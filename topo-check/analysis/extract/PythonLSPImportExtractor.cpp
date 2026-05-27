@@ -6,6 +6,7 @@
 
 #include "PythonLSPImportExtractor.h"
 #include "PythonUnsafeCatalog.h"
+#include "analysis/extract/CppImportExtractor.h"
 
 #include <cctype>
 #include <cstring>
