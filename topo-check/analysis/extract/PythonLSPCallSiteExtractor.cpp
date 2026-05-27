@@ -8,7 +8,6 @@
 #include "PythonLSPUtils.h"
 #include "PythonUnsafeCatalog.h"
 #include "PyrightBridge.h"
-#include "analysis/extract/CppCallSiteExtractor.h"
 #include "topo/Check/CapabilityCatalog.h"
 
 #include <string>
