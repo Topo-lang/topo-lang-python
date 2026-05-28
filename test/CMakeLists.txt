@@ -114,3 +114,25 @@ endif()
 # expected to re-run from the monorepo / from topo-cli once that repo lifts.
 message(STATUS "topo-lang-python tests: functional-e2e suite is gated off in "
                "standalone mode (requires topo-build CLI + E2eHarness.cpp).")
+
+# topo-debug-python verification gap. The contract is: when topo-lang-python
+# is built, it must ship the topo-debug-python adapter target. The adapter's
+# CMakeLists early-returns when Python3 isn't discoverable, leaving the
+# target undefined. Surface that absence as an explicit, always-fail ctest
+# so CI flags the missing interpreter instead of silently dropping debug
+# coverage. (Moved here on the topo-core split; see issue
+# topo-debug-python-missing-placeholder-only-makes-sense-in-monorepo.md —
+# topo-core can no longer assume topo-lang-python is on the prefix path,
+# so this enforcement belongs at the contract holder.)
+if(NOT TARGET topo-debug-python)
+    add_test(NAME e2e.topo-debug-python.MISSING
+        COMMAND ${CMAKE_COMMAND} -E echo
+                "topo-debug-python adapter not built: no Python3 \
+interpreter found at configure time. Install Python 3 (>=3.8 for the \
+pdb fallback; >=3.12 additionally enables --mode=sys-monitoring) and \
+re-run cmake.")
+    set_tests_properties(e2e.topo-debug-python.MISSING PROPERTIES
+        WILL_FAIL TRUE
+        LABELS "e2e;topo-debug-python;toolchain"
+        TIMEOUT 5)
+endif()
