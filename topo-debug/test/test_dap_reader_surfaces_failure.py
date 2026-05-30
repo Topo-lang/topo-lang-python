@@ -1,5 +1,4 @@
-"""Regression test for
-topo-lang-python-dapclient-reader-thread-swallows-exceptions.
+"""Regression test: the DAP reader thread must surface, not swallow, failures.
 
 Pre-fix, ``DapClient._reader_loop`` wrapped the entire read/parse/dispatch
 loop in ``except Exception: pass`` so any framing error, JSON decode

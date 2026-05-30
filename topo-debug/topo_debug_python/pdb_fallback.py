@@ -81,9 +81,8 @@ def run_pdb_fallback(target_path, fwd_args, abs_site, site_line,
     ``main.py`` already rejects non-identifier names at CLI parse
     time, but this function is also imported directly by tests and
     will eventually be reachable from a non-CLI driver, so the
-    expression-injection threat (audit issue
-    ``topo-lang-python-pdb-and-bridge-probe-expression-injection``)
-    is reaffirmed here.
+    expression-injection threat (a hostile var name eval'd into a
+    probe template) is reaffirmed here.
     """
     import re as _re
     _SAFE = _re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")

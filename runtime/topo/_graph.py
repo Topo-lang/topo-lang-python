@@ -48,7 +48,7 @@ class Handler:
 
     def signature(self) -> str:
         # The single input parameter is conventionally named `in` to match
-        # spec §7a's HandlerInput form; a source handler has no parameter.
+        # the handler-input form; a source handler has no parameter.
         param = "" if self.in_type is None else f"{self.in_type.topo()} in"
         return f"handler {self.name}({param}) -> {self.out_type.topo()};"
 

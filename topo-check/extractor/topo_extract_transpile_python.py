@@ -19,8 +19,8 @@ their independent evolution does not break each other's callers.
 A declared symbol whose body cannot be faithfully reconstructed is never
 silently dropped: every construct outside the MVP is recorded in the
 function's `unsupported` list and fidelity downgrades to "inferred"
-(matching the cross-extractor convention documented in
-transpile-model.md — `recovered` is reserved for decompile lifters).
+(matching the cross-extractor fidelity convention — `recovered` is
+reserved for decompile lifters).
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ class FnLift:
         self.degraded = True
 
     def fidelity(self) -> str:
-        # Cross-extractor convention (see transpile-model.md): a SOURCE
+        # Cross-extractor fidelity convention: a SOURCE
         # extractor that emits an approximation because the source feature
         # is outside the MVP uses "inferred". `recovered` is reserved for
         # decompile lifters (LLVM IR / JVM bytecode).
@@ -136,8 +136,7 @@ def type_from_annotation(node: ast.expr | None, lift: FnLift | None) -> dict:
     # PEP 604 union: `int | str` parses as ast.BinOp(left, BitOr(), right).
     # Without this branch the BinOp falls through to the stringify fallback
     # and emits ``nameParts = ["int | str"]`` — raw source text that the
-    # host emitters render verbatim and downstream compilers reject. Audit
-    # issue ``topo-lang-python-extractor-unknown-annotation-fallback-stringify``.
+    # host emitters render verbatim and downstream compilers reject.
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
         flat: list[ast.expr] = []
         def _flatten(n: ast.expr) -> None:
@@ -175,8 +174,7 @@ def type_from_annotation(node: ast.expr | None, lift: FnLift | None) -> dict:
     # a valid Python or Topo identifier so a host emitter rendering it
     # produces a clearly broken token instead of a silently-broken
     # plausible token. The ``unsupported`` note still carries the
-    # original source for triage. Audit issue
-    # ``topo-lang-python-extractor-unknown-annotation-fallback-stringify``.
+    # original source for triage.
     if lift is not None:
         try:
             unparsed = ast.unparse(node)

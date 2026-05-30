@@ -72,7 +72,7 @@ if(Python3_FOUND)
 endif()
 
 # Checker E2E tests depend on TopoCheckRunner, which is owned by topo-cli
-# (built but not exported — see split-topo-core-deferred-cleanup), so the
+# (built but not yet exported from its install set), so the
 # library is not reachable from a standalone topo-lang-python build. The
 # tests are skipped here and continue to run from the monorepo / from
 # topo-cli once that repo lifts. Mirrors topo-lang-java's check-tests
@@ -108,7 +108,7 @@ if(NOT WIN32)
 endif()
 
 # Functional E2E tests require the topo-build CLI (shipped by topo-core,
-# not in topo-core's install set today — see split-topo-core-deferred-cleanup)
+# not in topo-core's install set today)
 # and the in-tree E2eHarness.cpp source. Neither is reachable from this
 # standalone build, so the suite is unconditionally skipped here and is
 # expected to re-run from the monorepo / from topo-cli once that repo lifts.
@@ -120,10 +120,9 @@ message(STATUS "topo-lang-python tests: functional-e2e suite is gated off in "
 # CMakeLists early-returns when Python3 isn't discoverable, leaving the
 # target undefined. Surface that absence as an explicit, always-fail ctest
 # so CI flags the missing interpreter instead of silently dropping debug
-# coverage. (Moved here on the topo-core split; see issue
-# topo-debug-python-missing-placeholder-only-makes-sense-in-monorepo.md —
-# topo-core can no longer assume topo-lang-python is on the prefix path,
-# so this enforcement belongs at the contract holder.)
+# coverage. (Moved here on the topo-core split: topo-core can no longer
+# assume topo-lang-python is on the prefix path, so this enforcement
+# belongs at the contract holder rather than as a placeholder upstream.)
 if(NOT TARGET topo-debug-python)
     add_test(NAME e2e.topo-debug-python.MISSING
         COMMAND ${CMAKE_COMMAND} -E echo

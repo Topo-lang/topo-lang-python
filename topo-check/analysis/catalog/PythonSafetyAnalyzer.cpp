@@ -325,8 +325,8 @@ bool PythonSafetyAnalyzer::analyzeFileViaLSP(const std::string& filePath,
     }
 
     // Fetch the document outline once so every call site can be attributed
-    // to its real enclosing function (see
-    // checker-l2-synthetic-caller-attribution.md).  Python uses "::" as
+    // to its real enclosing function (L2 synthetic-caller attribution).
+    // Python uses "::" as
     // the canonical separator inside the symbol table and "." as the LSP
     // display separator; we pass "::" so isExternalCaller's rfind("::")
     // simple-name fallback works.
@@ -453,8 +453,8 @@ bool PythonSafetyAnalyzer::analyzeViaAstSubprocess(
     }
 
     // Per-file parse / read errors. The extractor now emits a structured
-    // ``fileErrors`` array (see audit issue
-    // ``topo-lang-python-extractor-per-file-syntax-error-coverage-loss``)
+    // ``fileErrors`` array (so a SyntaxError in one file no longer drops
+    // silently out of the containment verdict)
     // alongside the call sites; each entry becomes its own Warning
     // diagnostic so a user sees exactly which files dropped out of L2
     // coverage and why. The LSP semanticTokens path already had this

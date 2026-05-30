@@ -38,8 +38,7 @@ TEST(PythonContainment, ExternalClassMethodOk) {
     // `Renderer.render`) must be recognised as external via the simple-name
     // fallback. Requires LanguageAnalysisProvider::separator() == "." for
     // Python so ContainmentCheck splits the qualifiedName on the
-    // language-native separator (regression for issue
-    // containment-check-separator-hardcoded-double-colon).
+    // language-native separator rather than a hardcoded "::".
     CheckConfig cfg;
     cfg.projectDir = fixtureDir("containment_external_class_method_ok");
     cfg.checkName = "containment";

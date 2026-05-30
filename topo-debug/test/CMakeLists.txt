@@ -24,9 +24,9 @@ set(TOPO_DEBUG_PYTHON_STDLIB_BRIDGE
 if(Python3_EXECUTABLE)
     execute_process(
         COMMAND "${Python3_EXECUTABLE}" -c "import numpy"
-        RESULT_VARIABLE _WP43C_NUMPY_PROBE
+        RESULT_VARIABLE _NUMPY_PROBE
         OUTPUT_QUIET ERROR_QUIET)
-    if(_WP43C_NUMPY_PROBE EQUAL 0)
+    if(_NUMPY_PROBE EQUAL 0)
         set(TOPO_DEBUG_PYTHON_HAS_NUMPY ON CACHE INTERNAL
             "numpy importable (ndarray summary e2e enabled).")
     else()

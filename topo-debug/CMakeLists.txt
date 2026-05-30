@@ -31,9 +31,8 @@ endif()
 # adapter is now USEFUL even without debugpy — we therefore build the
 # launcher whenever Python3 is present and only *record* debugpy
 # availability so the e2e wiring can split DAP-only tests from
-# fallback-capable ones. (Resolves the open issue
-# `topo-debug-python-missing-test-when-debugpy-absent.md`: the basic-read
-# tests previously vanished entirely when debugpy was absent.)
+# fallback-capable ones. (Fixes the prior gap where the basic-read
+# tests vanished entirely when debugpy was absent.)
 execute_process(
     COMMAND "${Python3_EXECUTABLE}" -c "import debugpy"
     RESULT_VARIABLE _DEBUGPY_PROBE

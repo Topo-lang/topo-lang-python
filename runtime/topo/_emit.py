@@ -6,8 +6,8 @@ that produce ``.topo``, never magic inference:
   - handler A's output feeds handler B's input  -> edge A -> B
   - logic chain A -> B -> C                      -> flow with those edges
   - the flow's stage topology is left to core PipelineAnalysis; the
-    emitter only states edges, never stage numbers (handler/flow spec
-    §7a: flow body accepts pipeline edges only)
+    emitter only states edges, never stage numbers (a flow body
+    accepts pipeline edges only)
 
 The output is human-readable and hand-editable by construction — that
 is the decisive round-trip constraint, so the emitter favours a stable,

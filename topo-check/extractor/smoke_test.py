@@ -478,8 +478,8 @@ class SmokeTests(unittest.TestCase):
 
     def test_pep604_union_lifts_to_union_type(self):
         # PEP 604 `int | str` now lifts to a proper union TypeNode rather
-        # than falling through to the stringify fallback. Audit issue
-        # topo-lang-python-extractor-unknown-annotation-fallback-stringify.
+        # than falling through to the stringify fallback for unknown
+        # annotations.
         mod = run("def pick(x: int | str) -> int | str:\n    return x\n",
                   {"functions": [NS + "pick"]})
         fn = mod["functions"][0]

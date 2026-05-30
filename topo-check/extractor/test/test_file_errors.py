@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Regression test for
-topo-lang-python-extractor-per-file-syntax-error-coverage-loss.
+"""Regression test: per-file syntax errors must not cause silent L2 coverage loss.
 
 The L2 extractor (``topo_extract_python.py``) now emits a structured
 ``fileErrors`` array alongside ``callSites`` so the C++ analyzer can

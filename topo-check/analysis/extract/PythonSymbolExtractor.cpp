@@ -19,8 +19,7 @@
 // extractor subprocess (`topo_extract_python.py`). Real-world Python
 // source rarely triggers these edges; adversarial / unusual code may.
 //
-// Known bounded limitations (issue
-// topo-lang-python-symbolextractor-multiline-string-counter-heuristic):
+// Known bounded limitations of the triple-quote counting heuristic:
 //
 //   1. Escaped quotes inside a string literal:
 //        s = "\"\"\"text"
@@ -172,10 +171,8 @@ std::vector<HostSymbol> PythonSymbolExtractor::extractSymbols(const std::string&
         // Skip blank lines and comment-only lines BEFORE counting triple
         // quotes — a `# comment with """ literal here` would otherwise
         // tick the dq counter and falsely enter multi-line-string mode.
-        // (Fix for issue
-        // topo-lang-python-symbolextractor-multiline-string-counter-heuristic
-        // case 5; the other heuristic edges — escaped quotes, mixed
-        // quote types, multi-string single lines — are documented as
+        // (Fixes heuristic edge case 5; the other edges — escaped quotes,
+        // mixed quote types, multi-string single lines — are documented as
         // bounded limitations in the file-header invariant doc.)
         if (isBlankLine(line)) continue;
         size_t firstNonWs = line.find_first_not_of(" \t");

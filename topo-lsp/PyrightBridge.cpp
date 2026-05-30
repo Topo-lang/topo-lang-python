@@ -91,7 +91,7 @@ std::optional<std::string> PyrightBridge::getHoverInfo(const std::string& qualif
 // Escape ECMAScript regex metacharacters in ``s``. ``typeName`` arrives from
 // .topo declaration callers and is documented as the symbol declaration name
 // — not a regex pattern. Concatenating it raw into a ``std::regex`` literal
-// is the audit issue ``topo-lang-python-pyright-findtypedefinition-regex-injection``:
+// is a regex-injection hazard:
 // a dotted name like ``module.Foo`` turns ``.`` into "any character" and
 // produces false matches; a bracketed name like ``Container[T]`` opens a
 // malformed character class and throws ``std::regex_error`` straight through
@@ -129,8 +129,8 @@ std::optional<SymbolResult> PyrightBridge::findTypeDefinition(const std::string&
     // The `[` is escaped as `\[` inside the character class to avoid
     // turning it into a (malformed) nested class.
     //
-    // typeName is escaped (audit issue
-    // ``topo-lang-python-pyright-findtypedefinition-regex-injection``) and
+    // typeName is escaped (so a hostile type name can't inject regex
+    // metacharacters into the class-definition pattern) and
     // regex construction is try/caught so an unforeseen pattern shape
     // degrades to "type not found" rather than throwing through the LSP
     // request handler.

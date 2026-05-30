@@ -34,8 +34,7 @@ Protocol:
               successfully. The C++ analyzer relies on ``fileErrors`` to
               surface per-file coverage loss as distinct warnings so a
               SyntaxError in one file doesn't drop silently out of the
-              containment verdict (audit issue
-              ``topo-lang-python-extractor-per-file-syntax-error-coverage-loss``).
+              containment verdict.
     exit   -- 0 on any successful dispatch (even if some files failed to
               parse), non-zero only on fatal internal errors.
 

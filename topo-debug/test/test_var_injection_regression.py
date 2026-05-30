@@ -1,5 +1,4 @@
-"""Regression test for
-topo-lang-python-pdb-and-bridge-probe-expression-injection.
+"""Regression test: ``--var`` must not allow expression injection into probes.
 
 Pre-fix, ``--var <name>`` was interpolated verbatim into the pdb
 ``_PROBE`` and DAP ``_BRIDGE_PROBE`` / ``type_expr`` templates and
