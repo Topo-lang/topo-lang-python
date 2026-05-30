@@ -13,7 +13,7 @@
 # `slice<T>` ABI semantics ({u32 len, T* ptr}) intentionally degrade to
 # `list[T]` in Python value semantics — the boundary copy is acceptable for
 # first-batch use cases. See PythonEmitter for the TODO on memoryview /
-# numpy.ndarray for byte / numeric T in Phase 2.
+# numpy.ndarray for byte / numeric T in a future iteration.
 
 
 def isReady() -> bool:

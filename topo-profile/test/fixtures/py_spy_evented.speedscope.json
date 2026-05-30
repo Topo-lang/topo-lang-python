@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.speedscope.app/file-format-schema.json",
-  "exporter": "topo Plan 43 T3 C3 evented-rejection fixture",
+  "exporter": "topo evented-rejection fixture",
   "name": "minimal evented profile — must be rejected by the sampled-only converter",
   "shared": {
     "frames": [

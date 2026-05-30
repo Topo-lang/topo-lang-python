@@ -1,4 +1,4 @@
-# Plan 43 T3 — checked-in cProfile NDJSON fixture for the
+# Checked-in cProfile NDJSON fixture for the
 # `topo profile trace --mode=sampling --cprofile-input` e2e test.
 # Hand-curated minimal snapshot derived from running:
 #   python -m topo_profile_python.cprofile_harness cprofile_demo.py

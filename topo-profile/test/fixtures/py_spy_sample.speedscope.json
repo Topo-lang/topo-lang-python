@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.speedscope.app/file-format-schema.json",
-  "exporter": "py-spy@0.3 (topo Plan 43 T3 C3 fixture)",
+  "exporter": "py-spy@0.3 (topo profile fixture)",
   "name": "py-spy sample for topo-profile sampling e2e",
   "activeProfileIndex": 0,
   "shared": {

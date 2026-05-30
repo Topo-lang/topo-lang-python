@@ -1,4 +1,4 @@
-# Plan 43 — hand-curated PEP 669 sys.monitoring PY_START/PY_RETURN snapshot
+# Hand-curated PEP 669 sys.monitoring PY_START/PY_RETURN snapshot
 # (single thread, 4 nested calls) so CTest does not depend on a live
 # Python 3.12+ interpreter. Function names mirror declared stage-boundary
 # calls (stage_load / stage_transform) so the converter's flattened

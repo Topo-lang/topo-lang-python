@@ -2,7 +2,7 @@
 //
 // Two host lists in scope (`a`, `b`, both length 4) — the summary template
 // references both, so resolving it exercises the multi-var adapter protocol
-// (Plan 41 Phase 4) and the batched-summary single-spawn path (Plan 45 §1).
+// and the batched-summary single-spawn path.
 //
 // Validates the full topo-build-python flow + debugpy multi-var queries:
 // `topo build` runs completeness check + writes main.topo-dbg.json (the view

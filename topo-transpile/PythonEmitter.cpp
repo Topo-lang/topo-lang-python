@@ -200,7 +200,7 @@ EmitResult PythonEmitter::emit(const TranspileModule& module) {
     bool needsDataclass = !module.types.empty();
     bool needsOptional = false;
 
-    // Quick scan for Optional usage. The Batch 1 stdlib `optional<T>` is
+    // Quick scan for Optional usage. The first-batch stdlib `optional<T>` is
     // routed to PEP 604 `T | None` (see emitType), so it never needs the
     // `typing.Optional` import — skip stdlib optionals here.
     auto scanTypeForOptional = [](const TypeNode& t, auto& self) -> bool {
