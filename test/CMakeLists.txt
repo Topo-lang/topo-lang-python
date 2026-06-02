@@ -85,27 +85,26 @@ message(STATUS "topo-lang-python tests: checker-e2e suite is gated off in "
 # validation). Spawns the binary with hand-crafted request JSON files and
 # asserts the exit code + stderr label.
 #
-# Windows-skipped: the suite spawns topo-build-python.exe and every test
-# times out at 30s on GHA windows-2022 — same pattern as tpm's
-# CLI-integration tests, while ubuntu and macOS finish each in
-# milliseconds. Tracked as a MinGW-host subprocess interaction.
-if(NOT WIN32)
-    add_executable(topo-build-python-input-trust-tests
-        unit/PythonBackendExtrasInputTrustTest.cpp
-    )
-    target_link_libraries(topo-build-python-input-trust-tests PRIVATE
-        topo::core::TopoPlatform
-        nlohmann_json::nlohmann_json
-        GTest::gtest_main
-    )
-    target_compile_definitions(topo-build-python-input-trust-tests PRIVATE
-        TOPO_BUILD_PYTHON_EXE="$<TARGET_FILE:topo-build-python>"
-    )
-    add_dependencies(topo-build-python-input-trust-tests topo-build-python)
-    topo_set_compiler_flags(topo-build-python-input-trust-tests)
-    gtest_discover_tests(topo-build-python-input-trust-tests
-        PROPERTIES LABELS "toolchain;lang-python" TIMEOUT 30)
-endif()
+# Previously Windows-skipped: the suite spawns topo-build-python.exe via
+# topo::platform::runProcessCapture, which hung on GHA windows-2022 (reproc
+# exit-detection for MinGW children). Fixed in topo-core (raw-Win32 capture) +
+# the build-time gcc PATH-prepend in the Test step so the spawned MinGW tool
+# loads. Runs on all three platforms now.
+add_executable(topo-build-python-input-trust-tests
+    unit/PythonBackendExtrasInputTrustTest.cpp
+)
+target_link_libraries(topo-build-python-input-trust-tests PRIVATE
+    topo::core::TopoPlatform
+    nlohmann_json::nlohmann_json
+    GTest::gtest_main
+)
+target_compile_definitions(topo-build-python-input-trust-tests PRIVATE
+    TOPO_BUILD_PYTHON_EXE="$<TARGET_FILE:topo-build-python>"
+)
+add_dependencies(topo-build-python-input-trust-tests topo-build-python)
+topo_set_compiler_flags(topo-build-python-input-trust-tests)
+gtest_discover_tests(topo-build-python-input-trust-tests
+    PROPERTIES LABELS "toolchain;lang-python" TIMEOUT 30)
 
 # Functional E2E tests require the topo-build CLI (shipped by topo-core,
 # not in topo-core's install set today)
