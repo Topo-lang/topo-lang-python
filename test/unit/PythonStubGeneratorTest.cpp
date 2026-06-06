@@ -158,3 +158,21 @@ TEST_F(PythonStubGeneratorTest, DecoratorPreserved) {
     EXPECT_NE(stubbed.find("return None"), std::string::npos);
     EXPECT_EQ(stubbed.find("Svc()"), std::string::npos);
 }
+
+// 9. CrlfSignature — CRLF line endings must not break signature-end
+// detection. With CRLF the per-line back() is '\r', so before the fix the
+// "line ends with ':'" test never fired, the body was never located, and
+// stubbing failed. The signature here spans multiple lines to exercise the
+// paren-balance + colon detection together.
+TEST_F(PythonStubGeneratorTest, CrlfSignature) {
+    auto stubbed = stubAndRead(
+        "def add(\r\n"
+        "    x: int,\r\n"
+        "    y: int\r\n"
+        ") -> int:\r\n"
+        "    return x + y\r\n",
+        "add");
+    ASSERT_EQ(stubbed.rfind("STUB_FAILED:", 0), std::string::npos) << stubbed;
+    EXPECT_NE(stubbed.find("return 0"), std::string::npos);
+    EXPECT_EQ(stubbed.find("x + y"), std::string::npos);
+}

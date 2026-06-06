@@ -10,6 +10,7 @@ endif()
 # Lang type tests (header-only, no Python toolchain dependency at link time)
 add_executable(topo-lang-python-tests
     unit/PythonStubGeneratorTest.cpp
+    unit/PythonImportExtractorTest.cpp
     unit/PythonEmitterStdlibTest.cpp
     unit/PythonSafePatternsLoadTest.cpp
 )
@@ -21,7 +22,7 @@ target_link_libraries(topo-lang-python-tests PRIVATE
     GTest::gtest_main
 )
 target_include_directories(topo-lang-python-tests PRIVATE
-    ${PROJECT_SOURCE_DIR}/topo-check       # for analysis/stub/PythonStubGenerator.h
+    ${PROJECT_SOURCE_DIR}/topo-check       # analysis/stub/*.h + analysis/extract/*.h
     ${PROJECT_SOURCE_DIR}/topo-transpile   # for PythonEmitter.h
 )
 topo_set_compiler_flags(topo-lang-python-tests)

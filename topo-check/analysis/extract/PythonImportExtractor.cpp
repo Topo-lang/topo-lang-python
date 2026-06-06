@@ -59,6 +59,16 @@ std::vector<HostImport> PythonImportExtractor::extractImports(const std::string&
             continue;
         }
 
+        // Skip blank lines and comment-only lines BEFORE counting triple
+        // quotes — a `# comment with """ literal here` would otherwise tick
+        // the dq counter and falsely enter multi-line-string mode, swallowing
+        // every later import. (Mirrors the ordering already fixed in
+        // PythonSymbolExtractor; the other heuristic edges — escaped quotes,
+        // mixed quote types — remain bounded limitations of the L1 path.)
+        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
+        size_t firstNonWs = line.find_first_not_of(" \t");
+        if (firstNonWs != std::string::npos && line[firstNonWs] == '#') continue;
+
         // Detect start of multiline string (odd number of triple quotes)
         {
             size_t dqCount = 0, sqCount = 0;
@@ -73,13 +83,6 @@ std::vector<HostImport> PythonImportExtractor::extractImports(const std::string&
                 continue;
             }
         }
-
-        // Skip blank lines
-        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
-
-        // Skip comment-only lines
-        size_t firstNonWs = line.find_first_not_of(" \t");
-        if (firstNonWs != std::string::npos && line[firstNonWs] == '#') continue;
 
         // issue #7: explicit wildcard import handler — `from X import *`
         // pulls every public symbol of X into the current namespace,
@@ -118,11 +121,14 @@ std::vector<HostImport> PythonImportExtractor::extractImports(const std::string&
         std::smatch importMatch;
         if (std::regex_search(line, importMatch, importRegex)) {
             // Parse the rest of the import line for comma-separated modules.
-            // The regex captured the first module; scan from there for more.
+            // Anchor at the start of the first captured module rather than a
+            // hardcoded "import "(+7) offset off position(0): the match starts
+            // at the line's leading whitespace, so a fixed offset lands mid-
+            // keyword on indented `    import os` and yields garbage names.
             std::string rest = line.substr(
-                static_cast<size_t>(importMatch.position(0)) + 7); // skip "import "
+                static_cast<size_t>(importMatch.position(1)));
 
-            // Trim leading whitespace
+            // Trim leading whitespace (defensive; capture starts at the name)
             size_t start = rest.find_first_not_of(" \t");
             if (start == std::string::npos) continue;
             rest = rest.substr(start);

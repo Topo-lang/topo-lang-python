@@ -65,8 +65,10 @@ int indentLevel(const std::string& line) {
 }
 
 /// Return true if a line is blank (empty or whitespace-only).
+/// Includes '\r' so that on CRLF files a body-separating "\r\n" line
+/// (left as "\r" after splitting on '\n') is still recognized as blank.
 bool isBlank(const std::string& line) {
-    return line.find_first_not_of(" \t") == std::string::npos;
+    return line.find_first_not_of(" \t\r") == std::string::npos;
 }
 
 /// Trim leading and trailing whitespace from a string.
@@ -160,9 +162,14 @@ StubResult PythonStubGenerator::stubFunction(const std::string& filePath, const 
                     --parenDepth;
             }
 
-            // Signature ends when parens are balanced and line ends with ':'
+            // Signature ends when parens are balanced and line ends with ':'.
+            // Strip a trailing CR too: splitLines() splits on '\n', so on a
+            // CRLF file every line keeps a '\r' and `back()` would be '\r'
+            // instead of ':', silently never detecting the signature end.
             std::string stripped = lines[i];
-            while (!stripped.empty() && (stripped.back() == ' ' || stripped.back() == '\t'))
+            while (!stripped.empty() &&
+                   (stripped.back() == ' ' || stripped.back() == '\t' ||
+                    stripped.back() == '\r'))
                 stripped.pop_back();
 
             if (parenDepth <= 0 && !stripped.empty() && stripped.back() == ':') {
