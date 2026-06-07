@@ -1075,11 +1075,24 @@ def main() -> int:
 
     for path in files:
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            # utf-8-sig transparently strips a UTF-8 BOM (a BOM-prefixed
+            # file is otherwise a leading U+FEFF that desyncs the parse).
+            with open(path, "r", encoding="utf-8-sig") as f:
                 source = f.read()
         except OSError as e:
             fatal.append(f"cannot read {path}: {e}")
             continue
+        except UnicodeDecodeError as e:
+            # A single non-UTF-8 source file must not abort the whole
+            # batch (mirrors the read-error tolerance in the sibling L2
+            # extractor). Degrade gracefully: re-read replacing undecodable
+            # bytes so the file still parses, and note the substitution.
+            sys.stderr.write(
+                f"topo-extract-python: {path}: non-UTF-8 bytes "
+                f"replaced ({e})\n")
+            with open(path, "r", encoding="utf-8-sig",
+                      errors="replace") as f:
+                source = f.read()
         try:
             fns, types = collect_module(source, path)
         except SyntaxError as e:

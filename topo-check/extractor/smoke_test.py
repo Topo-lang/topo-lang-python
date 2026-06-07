@@ -563,5 +563,73 @@ class SmokeTests(unittest.TestCase):
         self.assertEqual(mod["functions"][0]["qualifiedName"], "calc::fib")
 
 
+def run_bytes(raw: bytes, request_overrides: dict | None = None,
+              module_name: str = "_smoke") -> "subprocess.CompletedProcess":
+    """Run the extractor over a file written from *raw bytes*.
+
+    Unlike ``run`` (which writes UTF-8 text) this lets a test stage a
+    BOM-prefixed or non-UTF-8 source file to exercise the decode path.
+    Returns the raw CompletedProcess so callers can assert on both the
+    exit code (batch must not abort) and stderr (graceful-degrade note).
+    """
+    tmpdir = tempfile.mkdtemp(prefix="topo-extract-py-bytes-")
+    path = os.path.join(tmpdir, module_name + ".py")
+    try:
+        with open(path, "wb") as f:
+            f.write(raw)
+        req = {"files": [path], "functions": [], "symbolTable": {}}
+        if request_overrides:
+            req.update(request_overrides)
+        return subprocess.run(
+            [sys.executable, SCRIPT],
+            input=json.dumps(req),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+        )
+    finally:
+        try:
+            os.unlink(path)
+        finally:
+            os.rmdir(tmpdir)
+
+
+class EncodingDegradation(unittest.TestCase):
+    """A non-UTF-8 / BOM-prefixed source file must degrade gracefully
+    rather than crash the whole transpile batch (regression for the
+    host-extractor encoding issue, instance #12). The fix reads with
+    ``utf-8-sig`` (transparent BOM strip) and falls back to
+    ``errors="replace"`` on a UnicodeDecodeError.
+    """
+
+    def test_utf8_bom_prefixed_file_lifts_symbol(self):
+        # A leading UTF-8 BOM must not corrupt the parse: utf-8-sig strips
+        # it, so the declared symbol still lifts and the batch exits 0.
+        src = "def add3(x: int) -> int:\n    return x + 3\n"
+        raw = b"\xef\xbb\xbf" + src.encode("utf-8")
+        res = run_bytes(raw, {"functions": [NS + "add3"]})
+        self.assertEqual(res.returncode, 0, res.stderr)
+        mod = json.loads(res.stdout)
+        self.assertEqual(mod["functions"][0]["qualifiedName"], NS + "add3")
+
+    def test_non_utf8_byte_does_not_abort_batch(self):
+        # A stray non-UTF-8 byte in a comment used to raise
+        # UnicodeDecodeError and abort the entire batch (return 1, no
+        # output). It must now degrade: the file is re-read with
+        # errors="replace", the surrounding declared symbol still lifts,
+        # and a diagnostic is written to stderr.
+        src = ("# caf\xe9 latte\n"  # 0xE9 alone is invalid UTF-8
+               "def add3(x: int) -> int:\n    return x + 3\n")
+        raw = src.encode("latin-1")
+        res = run_bytes(raw, {"functions": [NS + "add3"]})
+        self.assertEqual(res.returncode, 0, res.stderr)
+        mod = json.loads(res.stdout)
+        self.assertEqual(mod["functions"][0]["qualifiedName"], NS + "add3")
+        # The substitution is reported (not silent) so coverage loss is
+        # visible to the operator.
+        self.assertIn("non-UTF-8", res.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
