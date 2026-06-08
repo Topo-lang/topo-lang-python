@@ -27,7 +27,7 @@ target_include_directories(topo-lang-python-tests PRIVATE
 )
 topo_set_compiler_flags(topo-lang-python-tests)
 gtest_discover_tests(topo-lang-python-tests DISCOVERY_TIMEOUT 30
-    PROPERTIES LABELS "toolchain;lang-python;stdlib" TIMEOUT 60)
+    PROPERTIES LABELS "toolchain\;lang-python\;stdlib" TIMEOUT 60)
 
 # ── Python interpreter probe for the script-based suites ─────
 # Used by the extractor-fidelity gtest and the extractor smoke unittest.
@@ -55,7 +55,7 @@ if(Python3_FOUND)
     )
     topo_set_compiler_flags(topo-lang-python-extractor-fidelity-tests)
     gtest_discover_tests(topo-lang-python-extractor-fidelity-tests DISCOVERY_TIMEOUT 30
-        PROPERTIES LABELS "toolchain;lang-python;extractor-fidelity" TIMEOUT 60
+        PROPERTIES LABELS "toolchain\;lang-python\;extractor-fidelity" TIMEOUT 60
         ENVIRONMENT "TOPO_EXTRACT_ROOT=${PROJECT_SOURCE_DIR}")
 
     # Python *transpile* extractor smoke test — runs the production tool
@@ -105,7 +105,7 @@ target_compile_definitions(topo-build-python-input-trust-tests PRIVATE
 add_dependencies(topo-build-python-input-trust-tests topo-build-python)
 topo_set_compiler_flags(topo-build-python-input-trust-tests)
 gtest_discover_tests(topo-build-python-input-trust-tests
-    PROPERTIES LABELS "toolchain;lang-python" TIMEOUT 30)
+    PROPERTIES LABELS "toolchain\;lang-python" TIMEOUT 30)
 
 # Functional E2E tests require the topo-build CLI (shipped by topo-core,
 # not in topo-core's install set today)
