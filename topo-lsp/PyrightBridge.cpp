@@ -1,7 +1,5 @@
 #include "PyrightBridge.h"
 
-#include "topo/Platform/Platform.h"
-
 #include <fstream>
 #include <regex>
 #include <string>
@@ -16,12 +14,15 @@ bool PyrightBridge::start(const std::string& rootUri) {
 }
 
 bool PyrightBridge::start(const std::string& pyrightPath, const std::string& rootUri) {
-    namespace plat = topo::platform;
-
     std::string exe = pyrightPath;
     if (exe.empty()) {
-        // Try common name for Pyright Language Server
-        exe = "pyright-langserver" + std::string(plat::ExeSuffix);
+        // Common name for the Pyright Language Server. Bare name, no
+        // ExeSuffix: npm global installs stage `pyright-langserver.cmd` (a
+        // batch shim) on Windows, never a `.exe` — appending ".exe"
+        // guaranteed a miss. The platform spawn layer resolves bare names on
+        // PATH probing .exe/.cmd/.bat and routes batch launchers through
+        // cmd.exe.
+        exe = "pyright-langserver";
     }
 
     std::vector<std::string> args = {"--stdio"};
