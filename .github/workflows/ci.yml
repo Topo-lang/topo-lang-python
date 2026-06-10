@@ -13,9 +13,12 @@ concurrency:
 
 env:
   # Pin the upstream topo-core / topo-lang refs this build is tested against.
-  # Bump whenever a new compatible tag ships.
+  # Bump whenever a new compatible tag ships. TOPO_CLI_REF pins the
+  # downstream topo-cli checkout the verify-l2 job builds for its
+  # TopoCheckRunner export (checker-e2e suite link dependency).
   TOPO_CORE_REF: main
   TOPO_LANG_REF: main
+  TOPO_CLI_REF: main
 
 jobs:
   build-and-test:
@@ -185,3 +188,175 @@ jobs:
               -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
           cmake --build build
           ./build/smoke
+
+  # ── Checker-e2e + L2 deep-containment verify (pyright) ───────────
+  # build-and-test (above) never builds the checker-e2e suite: it links
+  # TopoCheckRunner, exported by topo-cli — a package downstream of this
+  # one — so the default matrix carries no reason to build it. This job
+  # adds that surface on one platform: topo-cli's only upstreams
+  # (topo-core + topo-lang) are the same prefix the default job already
+  # builds, so one extra build+install step unlocks the suite. pyright is
+  # installed so the PythonContainment.Deep* L2 cases exercise the real
+  # PyrightBridge + PythonSafetyAnalyzer path — with pyright absent the
+  # runner's no-silent-degradation guard forces a non-zero verdict and
+  # the Deep cases FAIL (they never skip). The final step re-runs the
+  # suite and converts any skip or zero-pass into a hard failure,
+  # mirroring the all-skip→fail guard in topo-lsp's CI.
+  verify-l2:
+    name: verify (checker e2e + pyright L2) (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install build deps (linux)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build
+
+      - name: Set up Python 3 (extractor scripts + the L2 ast subprocess path)
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js 22 (pyright host)
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      # pyright ships the pyright-langserver binary PyrightBridge probes
+      # for; npm -g puts it on PATH (unlike pip --user's ~/.local/bin).
+      # Same recipe topo-lsp's CI proves on this runner image.
+      - name: Install pyright (PyrightBridge host server)
+        run: |
+          npm i -g pyright
+          command -v pyright-langserver
+
+      - name: Export GHA cache env (for vcpkg x-gha backend)
+        uses: actions/github-script@v8
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+            core.exportVariable('ACTIONS_RESULTS_URL', process.env.ACTIONS_RESULTS_URL || '');
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: "56bb2411609227288b70117ead2c47585ba07713"
+
+      # Same key as build-and-test's ubuntu leg — this job consumes the
+      # identical upstream install (topo-cli goes to a separate, uncached
+      # prefix below, so the cached content is unchanged).
+      - name: Cache upstream topo install
+        id: topo-cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/topo-install
+          key: topo-core-${{ env.TOPO_CORE_REF }}-lang-${{ env.TOPO_LANG_REF }}-ubuntu-24.04-v4
+
+      - name: Build & install topo-core (zero-LLVM, lang-less)
+        if: steps.topo-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "${TOPO_CORE_REF}" \
+              https://github.com/topo-lang/topo-core.git \
+              "${RUNNER_TEMP}/topo-core-src"
+          cmake -S "${RUNNER_TEMP}/topo-core-src" \
+                -B "${RUNNER_TEMP}/topo-core-build" \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+                -DTOPO_ENABLE_LLVM=OFF
+          cmake --build "${RUNNER_TEMP}/topo-core-build" --target install
+
+      - name: Build & install topo-lang
+        if: steps.topo-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "${TOPO_LANG_REF}" \
+              https://github.com/topo-lang/topo-lang.git \
+              "${RUNNER_TEMP}/topo-lang-src"
+          cmake -S "${RUNNER_TEMP}/topo-lang-src" \
+                -B "${RUNNER_TEMP}/topo-lang-build" \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+          cmake --build "${RUNNER_TEMP}/topo-lang-build" --target install
+
+      - name: Re-install topo-core (with-lang)
+        if: steps.topo-cache.outputs.cache-hit != 'true'
+        run: |
+          cmake -S "${RUNNER_TEMP}/topo-core-src" \
+                -B "${RUNNER_TEMP}/topo-core-build" \
+                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install"
+          cmake --build "${RUNNER_TEMP}/topo-core-build" --target install
+
+      # Uncached on purpose: topo-cli is a thin router + small static lib
+      # (minutes to build with the vcpkg binary cache), and an always-fresh
+      # build tracks its main without a second cache key to bump. Plugins
+      # auto-detect to OFF (none on this prefix) — the checker-e2e suite
+      # links only the TopoCheckRunner static lib and registers this repo's
+      # plugin itself via TestMain. Profile CLI off: it would pull topo-v8
+      # into the installed config's find_dependency chain.
+      - name: Build & install topo-cli (TopoCheckRunner export)
+        run: |
+          git clone --depth 1 --branch "${TOPO_CLI_REF}" \
+              https://github.com/topo-lang/topo-cli.git \
+              "${RUNNER_TEMP}/topo-cli-src"
+          cmake -S "${RUNNER_TEMP}/topo-cli-src" \
+                -B "${RUNNER_TEMP}/topo-cli-build" \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/topo-cli-install" \
+                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+                -DTOPO_CLI_ENABLE_PROFILE=OFF
+          cmake --build "${RUNNER_TEMP}/topo-cli-build" --target install
+
+      - name: Configure topo-lang-python (tests ON, topo-cli on the prefix)
+        run: |
+          cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install;${RUNNER_TEMP}/topo-cli-install" \
+              -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+              -DTOPO_LANG_PYTHON_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run checker-e2e suite
+        run: |
+          # --no-tests=error: if the topo-cli gate silently failed and the
+          # checker suite was never registered, the job FAILS rather than
+          # greening on zero tests.
+          ctest --test-dir build -L checker --output-on-failure --timeout 180 --no-tests=error
+
+      # The Deep* L2 cases fail outright when pyright is missing (the
+      # runner's no-silent-degradation guard), but guard the suite the
+      # same way the other lang repos do: re-run the binary and FAIL on
+      # any skip or zero passes (skip != pass), so a future skip-guard
+      # added to these tests can never turn the job vacuously green.
+      - name: Assert L2 deep containment ran (skip != pass)
+        run: |
+          # set +e: handle errors explicitly — a grep no-match inside a
+          # command substitution would otherwise abort the step silently.
+          set +e
+          exe=$(find build -type f -name "topo-lang-python-check-tests" 2>/dev/null | head -1)
+          if [ -z "${exe}" ]; then
+            echo "::error::topo-lang-python-check-tests not built — topo-cli prefix missing at configure time?"; exit 1
+          fi
+          out=$("${exe}" 2>&1); rc=$?
+          printf '%s\n' "${out}" | tail -20
+          passed=$(printf '%s\n' "${out}" | grep -oE '\[  PASSED  \] [0-9]+ test' | grep -oE '[0-9]+' | tail -1)
+          skipped=$(printf '%s\n' "${out}" | grep -oE '\[  SKIPPED \] [0-9]+ test' | grep -oE '[0-9]+' | tail -1)
+          [ -z "${passed}" ] && passed=0
+          [ -z "${skipped}" ] && skipped=0
+          echo "topo-lang-python-check-tests: ${passed} PASSED, ${skipped} skipped (exit ${rc})"
+          if [ "${rc}" -ne 0 ]; then
+            echo "::error::checker-e2e suite failed (exit ${rc}) — pyright missing degrades the L2 verdict"; exit 1
+          fi
+          if [ "${skipped}" -gt 0 ] || [ "${passed}" -lt 1 ]; then
+            echo "::error::checker-e2e suite did not RUN its cases (skip != pass)"; exit 1
+          fi
