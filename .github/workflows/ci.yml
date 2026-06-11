@@ -356,30 +356,20 @@ jobs:
           # than green on zero tests.
           ctest --test-dir build -L functional --output-on-failure --timeout 120 --no-tests=error
 
-      # The Deep* L2 cases fail outright when pyright is missing (the
-      # runner's no-silent-degradation guard), but guard the suite the
-      # same way the other lang repos do: re-run the binary and FAIL on
-      # any skip or zero passes (skip != pass), so a future skip-guard
-      # added to these tests can never turn the job vacuously green.
+      # The checker suite passes ctest even when its gtest cases skip —
+      # "Passed" can mean "every case skipped". Re-run the binaries via the
+      # shared assert script: strict mode keeps the aggregate guards
+      # (exit 0, >=1 pass, ZERO skips), and the NAMED anchor cases — the
+      # pyright-backed L2 deep-containment path — must additionally appear
+      # in the PASSED set. An ABSENT name means renamed / filtered / not
+      # compiled in; update the list together with the test, never weaken
+      # the pattern. The functional suite is re-run under the same
+      # aggregate guards (it carries no skip paths today).
       - name: Assert L2 deep containment ran (skip != pass)
         run: |
-          # set +e: handle errors explicitly — a grep no-match inside a
-          # command substitution would otherwise abort the step silently.
-          set +e
-          exe=$(find build -type f -name "topo-lang-python-check-tests" 2>/dev/null | head -1)
-          if [ -z "${exe}" ]; then
-            echo "::error::topo-lang-python-check-tests not built — topo-cli prefix missing at configure time?"; exit 1
-          fi
-          out=$("${exe}" 2>&1); rc=$?
-          printf '%s\n' "${out}" | tail -20
-          passed=$(printf '%s\n' "${out}" | grep -oE '\[  PASSED  \] [0-9]+ test' | grep -oE '[0-9]+' | tail -1)
-          skipped=$(printf '%s\n' "${out}" | grep -oE '\[  SKIPPED \] [0-9]+ test' | grep -oE '[0-9]+' | tail -1)
-          [ -z "${passed}" ] && passed=0
-          [ -z "${skipped}" ] && skipped=0
-          echo "topo-lang-python-check-tests: ${passed} PASSED, ${skipped} skipped (exit ${rc})"
-          if [ "${rc}" -ne 0 ]; then
-            echo "::error::checker-e2e suite failed (exit ${rc}) — pyright missing degrades the L2 verdict"; exit 1
-          fi
-          if [ "${skipped}" -gt 0 ] || [ "${passed}" -lt 1 ]; then
-            echo "::error::checker-e2e suite did not RUN its cases (skip != pass)"; exit 1
-          fi
+          bash .github/scripts/assert-live-cases.sh strict topo-lang-python-check-tests \
+            PythonContainment.DeepOsFile \
+            PythonContainment.DeepExternalOk \
+            PythonContainment.DeepWildcardImportOs \
+            PythonContainment.DeepClassPunning
+          bash .github/scripts/assert-live-cases.sh strict topo-lang-python-functional-tests
