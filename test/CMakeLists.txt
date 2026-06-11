@@ -13,6 +13,7 @@ add_executable(topo-lang-python-tests
     unit/PythonImportExtractorTest.cpp
     unit/PythonEmitterStdlibTest.cpp
     unit/PythonSafePatternsLoadTest.cpp
+    unit/PythonAnalysisProviderTest.cpp
 )
 # TopoPythonAnalysis PUBLIC-propagates TopoPythonLSP → topo::core::TopoLSPBridge
 # → topo::core::TopoPlatform. TopoPythonTranspile brings in PythonEmitter

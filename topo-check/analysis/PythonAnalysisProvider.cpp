@@ -54,14 +54,33 @@ std::vector<std::string> PythonAnalysisProvider::collectSourceFiles(
         fs::path(projectDir) / "src",
         fs::path(projectDir)};
     std::set<std::string> seen;
+    auto addIfSource = [&](const fs::path& p) {
+        if (p.extension() == ".py") {
+            std::string path = p.string();
+            if (seen.insert(path).second)
+                files.push_back(path);
+        }
+    };
     for (const auto& dir : searchDirs) {
-        if (!fs::exists(dir)) continue;
-        for (const auto& entry : fs::recursive_directory_iterator(dir)) {
-            if (entry.path().extension() == ".py") {
-                std::string path = entry.path().string();
-                if (seen.insert(path).second)
-                    files.push_back(path);
-            }
+        std::error_code ec;
+        // A search root may be a regular FILE ("src" in the project root
+        // need not be a directory). Feeding a file to
+        // recursive_directory_iterator throws ("Not a directory") and
+        // aborted the checker before this guard.
+        if (fs::is_regular_file(dir, ec)) {
+            addIfSource(dir);
+            continue;
+        }
+        if (!fs::exists(dir, ec)) continue;
+        // Non-throwing iteration (error_code construction + increment, same
+        // pattern as the cpp/rust/java providers): an unreadable or
+        // vanishing entry must degrade to skipping it, never abort the
+        // process.
+        fs::recursive_directory_iterator it(dir, ec);
+        if (ec) continue;
+        for (; it != fs::recursive_directory_iterator(); it.increment(ec)) {
+            if (ec) break;
+            addIfSource(it->path());
         }
     }
     std::sort(files.begin(), files.end());
