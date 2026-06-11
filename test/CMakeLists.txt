@@ -73,43 +73,12 @@ if(Python3_FOUND)
     )
 endif()
 
-# Checker E2E tests (completeness + containment incl. the Deep* L2 cases
-# + purity + visibility + stage-isolation) link TopoCheckRunner, which
-# topo-cli exports (topo::cli::TopoCheckRunner). When topo-cli's cmake
-# config is not on CMAKE_PREFIX_PATH the suite skips cleanly with a
-# STATUS message (the standalone default; CI's verify-l2 job installs
-# topo-cli to enable it). Mirrors topo-lang-java's check-tests gate.
-# The PythonContainment.Deep* cases drive PythonSafetyAnalyzer through
-# PyrightBridge — pyright-langserver must be on PATH, or the runner's
-# no-silent-degradation guard downgrades the verdict and the cases FAIL
-# (they never skip). TIMEOUT 180: each deep case boots its own pyright
-# instance and waits for indexing, which dominates the 60s default on CI
-# runners.
-find_package(topo-cli CONFIG QUIET)
-if(TARGET topo::cli::TopoCheckRunner)
-    add_executable(topo-lang-python-check-tests
-        e2e/TestMain.cpp
-        e2e/PythonCompletenessTest.cpp
-        e2e/PythonContainmentTest.cpp
-        e2e/PythonPurityTest.cpp
-        e2e/PythonVisibilityTest.cpp
-        e2e/PythonStageIsolationTest.cpp
-    )
-    target_link_libraries(topo-lang-python-check-tests PRIVATE
-        topo::cli::TopoCheckRunner TopoPythonPlugin
-        GTest::gtest
-    )
-    target_compile_definitions(topo-lang-python-check-tests PRIVATE
-        TOPO_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/check"
-    )
-    topo_set_compiler_flags(topo-lang-python-check-tests)
-    gtest_discover_tests(topo-lang-python-check-tests DISCOVERY_TIMEOUT 30
-        PROPERTIES LABELS "toolchain\;checker\;lang-python" TIMEOUT 180)
-else()
-    message(STATUS "topo-lang-python tests: checker-e2e suite is gated off in "
-                   "standalone mode (topo-cli config providing TopoCheckRunner "
-                   "not on CMAKE_PREFIX_PATH).")
-endif()
+# Checker E2E suite — lives in check-e2e/ as a self-gating, idempotent file
+# so a meta-style super-build can re-add it after its topo-cli sibling
+# configures; see check-e2e/CMakeLists.txt for the gating rationale. This
+# inline add covers the standalone path (installed topo-cli on
+# CMAKE_PREFIX_PATH) and self-skips with a STATUS message otherwise.
+add_subdirectory(check-e2e)
 
 # topo-build-python CLI input-trust unit tests (per-value backendExtras
 # validation). Spawns the binary with hand-crafted request JSON files and
