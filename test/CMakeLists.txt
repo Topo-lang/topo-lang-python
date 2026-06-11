@@ -105,13 +105,59 @@ topo_set_compiler_flags(topo-build-python-input-trust-tests)
 gtest_discover_tests(topo-build-python-input-trust-tests
     PROPERTIES LABELS "toolchain\;lang-python" TIMEOUT 30)
 
-# Functional E2E tests require the topo-build CLI (shipped by topo-core,
-# not in topo-core's install set today)
-# and the in-tree E2eHarness.cpp source. Neither is reachable from this
-# standalone build, so the suite is unconditionally skipped here and is
-# expected to re-run from the monorepo / from topo-cli once that repo lifts.
-message(STATUS "topo-lang-python tests: functional-e2e suite is gated off in "
-               "standalone mode (requires topo-build CLI + E2eHarness.cpp).")
+# Functional E2E suite — drives the real topo-build CLI funnel against the
+# fixtures under fixtures/e2e (exit-code propagation, integrated-check
+# wiring, --no-verify/--no-check interplay, diagnostic surfacing). Needs
+# the topo-build + topo-check executables from topo-cli, a package
+# DOWNSTREAM of this one. Two paths in:
+#   * super-build (NOT PROJECT_IS_TOP_LEVEL) — the bare sibling targets
+#     resolve at generate time, after the topo-cli subdir is added;
+#   * standalone — an installed topo-cli on CMAKE_PREFIX_PATH provides the
+#     imported topo::cli::topo-build / topo::cli::topo-check executables
+#     (the verify-l2 CI job's surface). Self-skips with STATUS otherwise.
+if(NOT PROJECT_IS_TOP_LEVEL)
+    set(_topo_func_build_tgt topo-build)
+    set(_topo_func_check_tgt topo-check)
+else()
+    if(NOT TARGET topo::cli::topo-build)
+        find_package(topo-cli CONFIG QUIET)
+    endif()
+    if(TARGET topo::cli::topo-build AND TARGET topo::cli::topo-check)
+        set(_topo_func_build_tgt topo::cli::topo-build)
+        set(_topo_func_check_tgt topo::cli::topo-check)
+    endif()
+endif()
+if(DEFINED _topo_func_build_tgt)
+    add_executable(topo-lang-python-functional-tests
+        e2e/PythonFunctionalTests.cpp
+    )
+    target_link_libraries(topo-lang-python-functional-tests PRIVATE
+        topo::core::TopoPlatform
+        GTest::gtest_main
+    )
+    # TOPO_FUNC_E2E_TOOL_DIRS is ';'-joined; the fixture rejoins with the
+    # platform PATH separator and prepends once per process: topo-build
+    # dispatches by [build].language to topo-build-python and spawns
+    # topo-check, so both tool dirs must be reachable from PATH.
+    target_compile_definitions(topo-lang-python-functional-tests PRIVATE
+        TOPO_BUILD_EXE="$<TARGET_FILE:${_topo_func_build_tgt}>"
+        TOPO_PYTHON_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/e2e"
+        TOPO_FUNC_E2E_TOOL_DIRS="$<TARGET_FILE_DIR:topo-build-python>$<SEMICOLON>$<TARGET_FILE_DIR:${_topo_func_check_tgt}>"
+    )
+    # topo-build / topo-check may be imported executables here — CMake
+    # disallows add_dependencies on those; the $<TARGET_FILE:...> defines
+    # carry the file-level dependency. topo-build-python is in-tree.
+    add_dependencies(topo-lang-python-functional-tests topo-build-python)
+    topo_set_compiler_flags(topo-lang-python-functional-tests)
+    gtest_discover_tests(topo-lang-python-functional-tests DISCOVERY_TIMEOUT 30
+        PROPERTIES LABELS "e2e\;functional\;lang-python" TIMEOUT 120)
+    unset(_topo_func_build_tgt)
+    unset(_topo_func_check_tgt)
+else()
+    message(STATUS "topo-lang-python tests: functional-e2e suite is gated off in "
+                   "standalone mode (topo-cli config providing topo-build/topo-check "
+                   "not on CMAKE_PREFIX_PATH).")
+endif()
 
 # topo-debug-python verification gap. The contract is: when topo-lang-python
 # is built, it must ship the topo-debug-python adapter target. The adapter's
