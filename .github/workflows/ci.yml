@@ -293,14 +293,30 @@ jobs:
                 -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install"
           cmake --build "${RUNNER_TEMP}/topo-core-build" --target install
 
+      # The functional-e2e suite spawns topo-build → topo-check, and the
+      # spawned topo-check needs the Python plugin IN-PROCESS to check the
+      # python fixtures — so topo-cli (below) must find this repo's package
+      # at configure time. Lib-only install of the PR's own checkout.
+      - name: Build & install topo-lang-python (lib only)
+        run: |
+          cmake -S . -B "${RUNNER_TEMP}/lang-python-lib-build" -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/lang-python-install" \
+              -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install" \
+              -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+              -DTOPO_LANG_PYTHON_BUILD_TESTS=OFF
+          cmake --build "${RUNNER_TEMP}/lang-python-lib-build" --target install
+
       # Uncached on purpose: topo-cli is a thin router + small static lib
       # (minutes to build with the vcpkg binary cache), and an always-fresh
-      # build tracks its main without a second cache key to bump. Plugins
-      # auto-detect to OFF (none on this prefix) — the checker-e2e suite
-      # links only the TopoCheckRunner static lib and registers this repo's
-      # plugin itself via TestMain. Profile CLI off: it would pull topo-v8
-      # into the installed config's find_dependency chain.
-      - name: Build & install topo-cli (TopoCheckRunner export)
+      # build tracks its main without a second cache key to bump. The python
+      # plugin auto-detects ON from the lang-python prefix (the spawned
+      # topo-check must check python in-process — see above); the other
+      # plugins stay OFF. The checker-e2e suite still links only the
+      # TopoCheckRunner static lib and registers this repo's plugin itself
+      # via TestMain. Profile CLI off: it would pull topo-v8 into the
+      # installed config's find_dependency chain.
+      - name: Build & install topo-cli (TopoCheckRunner export, python plugin)
         run: |
           git clone --depth 1 --branch "${TOPO_CLI_REF}" \
               https://github.com/topo-lang/topo-cli.git \
@@ -310,7 +326,7 @@ jobs:
                 -G Ninja \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/topo-cli-install" \
-                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install;${RUNNER_TEMP}/lang-python-install" \
                 -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
                 -DTOPO_CLI_ENABLE_PROFILE=OFF
           cmake --build "${RUNNER_TEMP}/topo-cli-build" --target install
@@ -332,6 +348,13 @@ jobs:
           # checker suite was never registered, the job FAILS rather than
           # greening on zero tests.
           ctest --test-dir build -L checker --output-on-failure --timeout 180 --no-tests=error
+
+      - name: Run functional e2e suite
+        run: |
+          # --no-tests=error: the functional gate must have compiled the
+          # suite (installed topo-cli present on the prefix); FAIL rather
+          # than green on zero tests.
+          ctest --test-dir build -L functional --output-on-failure --timeout 120 --no-tests=error
 
       # The Deep* L2 cases fail outright when pyright is missing (the
       # runner's no-silent-degradation guard), but guard the suite the
