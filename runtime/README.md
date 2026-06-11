@@ -13,7 +13,8 @@ hand.
 - `topo/` — the importable package (`import topo`)
 - `examples/order_pipeline.py` — a runnable 3-stage flow
 - `test/test_vertical_slice.py` — acceptance tests (needs the built
-  toolchain; set `TOPO_BIN_DIR` or have a sibling `build-no-llvm`/`build`)
+  toolchain; resolution order: `TOPO_BIN_DIR`, then PATH, then a
+  sibling `build`/`build-asan` tree)
 
 The package consumes the existing toolchain (`topo`, `topo-check`); it
 reimplements no parsing or checking. Dependency direction stays

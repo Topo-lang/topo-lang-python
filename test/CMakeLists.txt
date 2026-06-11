@@ -73,6 +73,26 @@ if(Python3_FOUND)
     )
 endif()
 
+# Runtime toolchain-locator unit tests (pure-stdlib unittest; fake
+# binaries staged in temp dirs, no real toolchain needed). Pins the
+# canonical resolution order: strict TOPO_BIN_DIR > PATH > sibling build
+# trees, build-no-llvm excluded. The topo package __init__ imports
+# tomllib, so Python 3.11 is the floor.
+if(Python3_FOUND AND Python3_VERSION VERSION_GREATER_EQUAL 3.11)
+    add_test(NAME py-toolchain-resolution
+        COMMAND ${Python3_EXECUTABLE} -m unittest -v
+                test_platform test_toolchain_resolution
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/runtime/test
+    )
+    set_tests_properties(py-toolchain-resolution PROPERTIES
+        LABELS "toolchain;lang-python"
+        TIMEOUT 60
+    )
+else()
+    message(STATUS "topo-lang-python tests: py-toolchain-resolution skipped — "
+                   "needs Python3 >= 3.11 (the topo package imports tomllib).")
+endif()
+
 # Checker E2E suite — lives in check-e2e/ as a self-gating, idempotent file
 # so a meta-style super-build can re-add it after its topo-cli sibling
 # configures; see check-e2e/CMakeLists.txt for the gating rationale. This
