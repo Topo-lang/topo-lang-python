@@ -5,9 +5,8 @@
 # f64-ramp fixture used by topo-debug-cpp's e2e tests.
 #
 # The breakpoint line is the line of `sentinel = 0` below — currently line 15.
-# If you re-arrange this file, update the `--break tiny_vector.py:<N>` value
-# in topo-core/test/debug-profile-e2e.cmake and in the lang-python CI
-# real-adapter step (windows-2022) that mirrors it.
+# If you re-arrange this file, update the `--break tiny_vector.py:<N>` values
+# in topo-core/test/debug-profile-e2e.cmake and this repo's CI adapter step.
 import sys
 
 
