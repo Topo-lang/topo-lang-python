@@ -155,14 +155,18 @@ if(DEFINED _topo_func_build_tgt)
         topo::core::TopoPlatform
         GTest::gtest_main
     )
-    # TOPO_FUNC_E2E_TOOL_DIRS is ';'-joined; the fixture rejoins with the
+    # TOPO_FUNC_E2E_TOOL_DIRS is '|'-joined; the fixture rejoins with the
     # platform PATH separator and prepends once per process: topo-build
     # dispatches by [build].language to topo-build-python and spawns
-    # topo-check, so both tool dirs must be reachable from PATH.
+    # topo-check, so both tool dirs must be reachable from PATH. The
+    # separator is '|' because a ';' in a quoted compile-definition value
+    # is split into extra -D tokens at generate time, which breaks the
+    # quote pairing in the compiler command line ($<SEMICOLON> cannot
+    # protect a value that carries its own embedded quotes).
     target_compile_definitions(topo-lang-python-functional-tests PRIVATE
         TOPO_BUILD_EXE="$<TARGET_FILE:${_topo_func_build_tgt}>"
         TOPO_PYTHON_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/e2e"
-        TOPO_FUNC_E2E_TOOL_DIRS="$<TARGET_FILE_DIR:topo-build-python>$<SEMICOLON>$<TARGET_FILE_DIR:${_topo_func_check_tgt}>"
+        TOPO_FUNC_E2E_TOOL_DIRS="$<TARGET_FILE_DIR:topo-build-python>|$<TARGET_FILE_DIR:${_topo_func_check_tgt}>"
     )
     # topo-build / topo-check may be imported executables here — CMake
     # disallows add_dependencies on those; the $<TARGET_FILE:...> defines

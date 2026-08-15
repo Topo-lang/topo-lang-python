@@ -39,12 +39,13 @@ void prependToolDirsOnce() {
     dirs = TOPO_FUNC_E2E_TOOL_DIRS;
 #endif
     if (dirs.empty()) return;
-    // The define is ';'-joined by CMake; rejoin with the platform PATH
+    // The define is '|'-joined by CMake (';' would split the value into
+    // extra -D tokens at generate time); rejoin with the platform PATH
     // separator (identical on Windows, ':' on POSIX).
     std::string prefix;
     std::string::size_type start = 0;
     while (start <= dirs.size()) {
-        auto end = dirs.find(';', start);
+        auto end = dirs.find('|', start);
         if (end == std::string::npos) end = dirs.size();
         if (end > start) {
             if (!prefix.empty()) prefix += pathSep;
