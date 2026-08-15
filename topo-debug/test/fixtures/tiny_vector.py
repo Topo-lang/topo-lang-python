@@ -4,9 +4,10 @@
 # `sentinel = 0` line; by then `vec` has been bound, mirroring tiny_vector.cpp's
 # f64-ramp fixture used by topo-debug-cpp's e2e tests.
 #
-# The breakpoint line is the line of `sentinel = 0` below — currently line 14.
+# The breakpoint line is the line of `sentinel = 0` below — currently line 15.
 # If you re-arrange this file, update the `--break tiny_vector.py:<N>` value
-# in topo-core/test/CMakeLists.txt.
+# in topo-core/test/debug-profile-e2e.cmake and in the lang-python CI
+# real-adapter step (windows-2022) that mirrors it.
 import sys
 
 

@@ -47,6 +47,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Windows: debugpy must be importable under the SAME interpreter the
+      # Configure step probes (TOPO_DEBUG_PYTHON_HAS_DEBUGPY) — otherwise the
+      # launcher silently degrades to the stdlib pdb fallback and the
+      # real-adapter e2e below would pass vacuously. Must precede Configure.
+      - name: Install debugpy (Windows real-adapter e2e)
+        if: runner.os == 'Windows'
+        run: python -m pip install debugpy
+
       - name: Export GHA cache env (for vcpkg x-gha backend)
         uses: actions/github-script@v8
         with:
@@ -137,6 +145,36 @@ jobs:
             fi
           fi
           ctest --test-dir build --output-on-failure --timeout 120
+
+      # ── Real debug-adapter e2e (Windows) ───────────────────────────
+      # One REAL debug-adapter round-trip on a Windows CI surface (the
+      # remaining acceptance bullet of the reproc-hang issue): topo-debug
+      # drives the debugpy DAP adapter — the .cmd launcher generated at
+      # Configure time — against the staged tiny_vector fixture. Asserting
+      # the pdb-fallback notice is ABSENT is what makes this a real-adapter
+      # proof: the query also succeeds through the stdlib pdb fallback, so
+      # a green 32.0 alone would be vacuous. Reuses the MinGW PATH fix from
+      # the Test step above (the spawned .exe + python chain inherit it).
+      - name: Real debug-adapter e2e (topo-debug + debugpy)
+        if: runner.os == 'Windows'
+        run: |
+          cxx=$(grep -m1 '^CMAKE_CXX_COMPILER:' build/CMakeCache.txt | cut -d= -f2)
+          if [ -n "$cxx" ]; then
+            export PATH="$(cygpath -u "$(dirname "$cxx")"):${PATH}"
+          fi
+          out=$(mktemp)
+          "${RUNNER_TEMP}/topo-install/bin/topo-debug.exe" query "sum(vec)" \
+              --break tiny_vector.py:15 \
+              --adapter "$(cygpath -m "$PWD/build/topo-debug/topo-debug-python.cmd")" \
+              --target "$(cygpath -m "$PWD/build/topo-debug/test/fixtures/tiny_vector.py")" \
+              >"$out" 2>&1
+          cat "$out"
+          grep -Eq '^32(\.0+)?[[:space:]]*$' "$out" \
+              || { echo "::error::debugpy e2e: unexpected query output (want 32.0)"; exit 1; }
+          if grep -q "falling back to stdlib pdb" "$out"; then
+            echo "::error::debugpy e2e ran through the stdlib pdb fallback — not a real-adapter proof"
+            exit 1
+          fi
 
       # Smoke test: install topo-lang-python, then verify a downstream
       # find_package(topo-lang-python CONFIG REQUIRED) resolves and links
