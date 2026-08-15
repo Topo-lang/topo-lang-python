@@ -2,26 +2,34 @@
 
 topo-app is a product layer that *consumes* the existing toolchain; it
 never reimplements parsing or checking. The binaries are produced by the
-project's CMake build. Resolution order:
+project's CMake build. Resolution order (canonical across the python /
+typescript / java runtimes):
 
-  1. explicit env var (TOPO_BIN_DIR) — used by tests and CI
-  2. a sibling build tree of this checkout
+  1. explicit env var (TOPO_BIN_DIR) — the CI/test pinning contract; may
+     point at a build tree or straight at a bin directory. STRICT: when
+     set, the binary must resolve under it or the locator raises with an
+     actionable error. Falling through to PATH would silently swap the
+     binary under test — exactly the "silently degrading a correctness
+     tool" failure mode this module exists to prevent.
+  2. PATH lookup for the bare binary name — the layout ``cmake
+     --install``, Homebrew, and the per-package installs ship into, and
+     the only resolution that works outside a source checkout.
+     PATHEXT-aware on Windows.
+  3. known sibling build trees of this checkout, fixed order, first hit
+     wins: ``build/`` then ``build-asan/``. ``build-no-llvm/`` is
+     deliberately NOT searched: a stale tree predating current grammar
+     support mis-resolves and produces spurious parse failures. Only
+     freshly built trees are trusted; pin TOPO_BIN_DIR to override the
+     fixed order.
 
-A clear error is raised if neither yields the binary, because silently
+A clear error is raised if no tier yields the binary, because silently
 degrading a correctness tool would defeat the point.
 
-Newest-tree-wins (within the sibling build dirs): the historical bug was
-that ``_BUILD_DIRS`` is an *ordered* list and ``_find`` returned the
-first directory that merely *existed*. A month-stale ``build-no-llvm/``
-binary (predating current grammar/parser support) then silently shadowed
-a freshly built ``build/``, producing spurious failures that looked like
-product bugs. There is no robust way to map a binary's mtime to a
-grammar version, so the deterministic, defensible heuristic is: among the
-candidate sibling trees, pick the executable with the newest mtime. An
-explicit ``TOPO_BIN_DIR`` always wins outright (it is the CI/test
-contract); auto-resolution across the unpinned build dirs only kicks in
-when no override is given, and there it prefers the most-recently-built
-tree rather than a fixed directory order.
+Windows portability: ``is_executable`` (from _platform) recognises
+PATHEXT-matching files (the X_OK probe is unreliable on Windows for
+``.exe`` files), and _candidate_paths_for transparently probes the
+``.exe`` suffix + multi-config subdirs (Release/, Debug/) emitted by
+Visual Studio / Xcode generators.
 """
 
 from __future__ import annotations
@@ -30,23 +38,16 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from ._platform import is_executable, is_windows
+from ._platform import _pathext, is_executable, is_windows
 
 # This file lives at topo-lang-python/runtime/topo/_toolchain.py; the
 # repository root is four parents up.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# Order here is NOT a priority order any more — see the module docstring.
-# It is only the set of sibling build trees to consider when no explicit
-# TOPO_BIN_DIR is given; the newest-mtime executable among them wins.
-#
-# Windows portability: ``is_executable`` (from _platform) recognises
-# PATHEXT-matching files (the X_OK probe is unreliable on Windows for
-# ``.exe`` files), and _candidate_paths_for transparently probes the
-# ``.exe`` suffix + multi-config subdirs (Release/, Debug/) emitted by
-# Visual Studio / Xcode generators. A freshly built Windows toolchain
-# is discoverable without a special path.
-_BUILD_DIRS = ("build-no-llvm", "build", "build-asan")
+# Sibling build trees probed by tier 3, in priority order (first hit
+# wins). build-no-llvm/ is deliberately excluded — see the module
+# docstring.
+_BUILD_DIRS = ("build", "build-asan")
 
 # Per-build sub-config directories CMake's multi-config generators emit
 # (Visual Studio, Xcode). Probed after the flat layout.
@@ -89,8 +90,31 @@ def _resolve_in(base: Path, rel: str) -> Optional[Path]:
     return None
 
 
+def _find_on_path(bare: str) -> Optional[Path]:
+    """Cross-platform ``which``: walk PATH for the bare binary name,
+    honouring PATHEXT on Windows so a request for "topo" correctly finds
+    "topo.exe". Hand-rolled (not shutil.which) so the PATHEXT semantics
+    stay identical to the typescript / java locators. Returns None if
+    not found.
+    """
+    path_env = os.environ.get("PATH")
+    if not path_env:
+        return None
+    suffixes: List[str] = [""]
+    if is_windows():
+        suffixes.extend(_pathext())
+    for d in path_env.split(os.pathsep):
+        if not d:
+            continue
+        for sfx in suffixes:
+            cand = Path(d) / (bare + sfx)
+            if is_executable(cand):
+                return cand
+    return None
+
+
 def _find(rel: str) -> Path:
-    # 1. Explicit override always wins outright — the CI/test contract.
+    # 1. Explicit override — STRICT: set means "use exactly this tree".
     env = os.environ.get("TOPO_BIN_DIR")
     if env:
         hit = _resolve_in(Path(env), rel)
@@ -100,29 +124,27 @@ def _find(rel: str) -> Path:
             f"TOPO_BIN_DIR={env!r} is set but does not contain an "
             f"executable '{rel}'. Point TOPO_BIN_DIR at a build tree "
             f"that has been built (cmake --build <tree> --target "
-            f"topo topo-check)."
+            f"topo topo-check), or unset it to fall back to PATH / the "
+            f"sibling build trees."
         )
 
-    # 2. No override: pick the NEWEST-built executable across the
-    #    candidate sibling trees. Resolution is deterministic — ties on
-    #    mtime fall back to _BUILD_DIRS order — so a stale build-no-llvm/
-    #    can no longer silently shadow a fresh build/.
-    best: Optional[Path] = None
-    best_mtime = -1.0
+    # 2. PATH probe — the installed-package layout.
+    on_path = _find_on_path(Path(rel).name)
+    if on_path is not None:
+        return on_path
+
+    # 3. Sibling build trees, fixed order, first hit wins (see the
+    #    module docstring for why build-no-llvm/ is excluded).
     for b in _BUILD_DIRS:
         hit = _resolve_in(_REPO_ROOT / b, rel)
-        if hit is None:
-            continue
-        mtime = hit.stat().st_mtime
-        if mtime > best_mtime:
-            best, best_mtime = hit, mtime
-    if best is not None:
-        return best
+        if hit is not None:
+            return hit
 
     raise FileNotFoundError(
-        f"could not locate '{rel}'. Build the toolchain "
-        f"(cmake --preset no-llvm && cmake --build build-no-llvm --target "
-        f"topo topo-check) or set TOPO_BIN_DIR."
+        f"could not locate '{rel}'. Install the Topo toolchain (so it is "
+        f"on PATH), build it (cmake --build build --target topo "
+        f"topo-check), or set TOPO_BIN_DIR (must be a current build tree, "
+        f"not the stale build-no-llvm)."
     )
 
 

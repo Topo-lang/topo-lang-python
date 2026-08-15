@@ -128,9 +128,31 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> sourceFiles;
     for (const auto& src : req.sources) {
         fs::path srcPath(src);
-        if (fs::is_directory(srcPath)) {
-            for (const auto& entry : fs::recursive_directory_iterator(srcPath)) {
-                if (entry.path().extension() == ".py") sourceFiles.push_back(entry.path().string());
+        std::error_code ec;
+        const bool isDir = fs::is_directory(srcPath, ec);
+        if (ec) {
+            std::cerr << "warning: cannot stat " << srcPath << ": " << ec.message() << "\n";
+            continue;
+        }
+        if (isDir) {
+            // Non-throwing iteration (error_code construction + increment,
+            // same pattern as PythonAnalysisProvider): a permission denial
+            // or a vanishing entry mid-scan must degrade to a diagnostic,
+            // never abort the process.
+            fs::recursive_directory_iterator it(
+                srcPath, fs::directory_options::skip_permission_denied, ec);
+            if (ec) {
+                std::cerr << "warning: cannot scan " << srcPath << ": " << ec.message() << "\n";
+                continue;
+            }
+            for (; it != fs::recursive_directory_iterator(); it.increment(ec)) {
+                if (ec) {
+                    std::cerr << "warning: directory scan of " << srcPath
+                              << " stopped: " << ec.message() << "\n";
+                    break;
+                }
+                if (it->path().extension() == ".py")
+                    sourceFiles.push_back(it->path().string());
             }
         } else if (srcPath.extension() == ".py") {
             sourceFiles.push_back(srcPath.string());

@@ -1,8 +1,8 @@
 """End-to-end acceptance for the topo-app Python vertical slice.
 
 Each test maps to a plan task's acceptance criterion. Requires the
-toolchain binaries (``topo``, ``topo-check``); set ``TOPO_BIN_DIR`` or
-have a sibling ``build-no-llvm`` / ``build`` tree.
+toolchain binaries (``topo``, ``topo-check``); set ``TOPO_BIN_DIR``,
+have them on PATH, or have a sibling ``build`` / ``build-asan`` tree.
 
 Run: ``python3 -m unittest discover -s topo-lang-python/runtime/test``
 """
@@ -190,6 +190,6 @@ class T5ConfigEntry(unittest.TestCase):
 
 if __name__ == "__main__":
     if "TOPO_BIN_DIR" not in os.environ:
-        print("note: TOPO_BIN_DIR unset; relying on sibling build tree",
-              file=sys.stderr)
+        print("note: TOPO_BIN_DIR unset; relying on PATH or a sibling "
+              "build tree", file=sys.stderr)
     unittest.main()

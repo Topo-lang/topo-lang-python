@@ -47,6 +47,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Windows: debugpy must be importable under the SAME interpreter the
+      # Configure step probes (TOPO_DEBUG_PYTHON_HAS_DEBUGPY) — otherwise the
+      # launcher silently degrades to the stdlib pdb fallback and the
+      # real-adapter e2e below would pass vacuously. Must precede Configure.
+      - name: Install debugpy (Windows real-adapter e2e)
+        if: runner.os == 'Windows'
+        run: python -m pip install debugpy
+
       - name: Export GHA cache env (for vcpkg x-gha backend)
         uses: actions/github-script@v8
         with:
@@ -138,6 +146,36 @@ jobs:
           fi
           ctest --test-dir build --output-on-failure --timeout 120
 
+      # ── Real debug-adapter e2e (Windows) ───────────────────────────
+      # One REAL debug-adapter round-trip on a Windows CI surface (the
+      # remaining acceptance bullet of the reproc-hang issue): topo-debug
+      # drives the debugpy DAP adapter — the .cmd launcher generated at
+      # Configure time — against the staged tiny_vector fixture. Asserting
+      # the pdb-fallback notice is ABSENT is what makes this a real-adapter
+      # proof: the query also succeeds through the stdlib pdb fallback, so
+      # a green 32.0 alone would be vacuous. Reuses the MinGW PATH fix from
+      # the Test step above (the spawned .exe + python chain inherit it).
+      - name: Real debug-adapter e2e (topo-debug + debugpy)
+        if: runner.os == 'Windows'
+        run: |
+          cxx=$(grep -m1 '^CMAKE_CXX_COMPILER:' build/CMakeCache.txt | cut -d= -f2)
+          if [ -n "$cxx" ]; then
+            export PATH="$(cygpath -u "$(dirname "$cxx")"):${PATH}"
+          fi
+          out=$(mktemp)
+          "${RUNNER_TEMP}/topo-install/bin/topo-debug.exe" query "sum(vec)" \
+              --break tiny_vector.py:15 \
+              --adapter "$(cygpath -m "$PWD/build/topo-debug/topo-debug-python.cmd")" \
+              --target "$(cygpath -m "$PWD/build/topo-debug/test/fixtures/tiny_vector.py")" \
+              >"$out" 2>&1
+          cat "$out"
+          grep -Eq '^32(\.0+)?[[:space:]]*$' "$out" \
+              || { echo "::error::debugpy e2e: unexpected query output (want 32.0)"; exit 1; }
+          if grep -q "falling back to stdlib pdb" "$out"; then
+            echo "::error::debugpy e2e ran through the stdlib pdb fallback — not a real-adapter proof"
+            exit 1
+          fi
+
       # Smoke test: install topo-lang-python, then verify a downstream
       # find_package(topo-lang-python CONFIG REQUIRED) resolves and links
       # cleanly against the topo::lang-python::TopoPythonAnalysis target.
@@ -187,7 +225,21 @@ jobs:
               -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/lang-python-install;${RUNNER_TEMP}/topo-install" \
               -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
           cmake --build build
-          ./build/smoke
+          # bash does not resolve the .exe suffix for exec — the Windows
+          # runner builds smoke.exe, every other leg builds smoke. The
+          # MinGW-linked smoke.exe also needs its build-time gcc bin dir
+          # FIRST on PATH to resolve libstdc++/libgcc at exec time (the
+          # same fix the Test step uses) — a missing DLL surfaces as
+          # bash exit 127.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cxx=$(grep -m1 '^CMAKE_CXX_COMPILER:' build/CMakeCache.txt | cut -d= -f2)
+            if [ -n "$cxx" ]; then
+              export PATH="$(cygpath -u "$(dirname "$cxx")"):${PATH}"
+            fi
+            ./build/smoke.exe
+          else
+            ./build/smoke
+          fi
 
   # ── Checker-e2e + L2 deep-containment verify (pyright) ───────────
   # build-and-test (above) never builds the checker-e2e suite: it links
@@ -293,14 +345,30 @@ jobs:
                 -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install"
           cmake --build "${RUNNER_TEMP}/topo-core-build" --target install
 
+      # The functional-e2e suite spawns topo-build → topo-check, and the
+      # spawned topo-check needs the Python plugin IN-PROCESS to check the
+      # python fixtures — so topo-cli (below) must find this repo's package
+      # at configure time. Lib-only install of the PR's own checkout.
+      - name: Build & install topo-lang-python (lib only)
+        run: |
+          cmake -S . -B "${RUNNER_TEMP}/lang-python-lib-build" -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/lang-python-install" \
+              -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install" \
+              -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+              -DTOPO_LANG_PYTHON_BUILD_TESTS=OFF
+          cmake --build "${RUNNER_TEMP}/lang-python-lib-build" --target install
+
       # Uncached on purpose: topo-cli is a thin router + small static lib
       # (minutes to build with the vcpkg binary cache), and an always-fresh
-      # build tracks its main without a second cache key to bump. Plugins
-      # auto-detect to OFF (none on this prefix) — the checker-e2e suite
-      # links only the TopoCheckRunner static lib and registers this repo's
-      # plugin itself via TestMain. Profile CLI off: it would pull topo-v8
-      # into the installed config's find_dependency chain.
-      - name: Build & install topo-cli (TopoCheckRunner export)
+      # build tracks its main without a second cache key to bump. The python
+      # plugin auto-detects ON from the lang-python prefix (the spawned
+      # topo-check must check python in-process — see above); the other
+      # plugins stay OFF. The checker-e2e suite still links only the
+      # TopoCheckRunner static lib and registers this repo's plugin itself
+      # via TestMain. Profile CLI off: it would pull topo-v8 into the
+      # installed config's find_dependency chain.
+      - name: Build & install topo-cli (TopoCheckRunner export, python plugin)
         run: |
           git clone --depth 1 --branch "${TOPO_CLI_REF}" \
               https://github.com/topo-lang/topo-cli.git \
@@ -310,16 +378,21 @@ jobs:
                 -G Ninja \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/topo-cli-install" \
-                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install" \
+                -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install;${RUNNER_TEMP}/lang-python-install" \
                 -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
                 -DTOPO_CLI_ENABLE_PROFILE=OFF
           cmake --build "${RUNNER_TEMP}/topo-cli-build" --target install
 
       - name: Configure topo-lang-python (tests ON, topo-cli on the prefix)
         run: |
+          # lang-python-install must be on the prefix too: topo-cli was
+          # built WITH the Python plugin, so its installed config
+          # find_dependency()s topo-lang-python — without it the QUIET
+          # find_package(topo-cli) fails and the checker-e2e suite
+          # self-skips (green-on-zero-tests).
           cmake -S . -B build -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install;${RUNNER_TEMP}/topo-cli-install" \
+              -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/topo-install;${RUNNER_TEMP}/topo-cli-install;${RUNNER_TEMP}/lang-python-install" \
               -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
               -DTOPO_LANG_PYTHON_BUILD_TESTS=ON
 
@@ -333,30 +406,27 @@ jobs:
           # greening on zero tests.
           ctest --test-dir build -L checker --output-on-failure --timeout 180 --no-tests=error
 
-      # The Deep* L2 cases fail outright when pyright is missing (the
-      # runner's no-silent-degradation guard), but guard the suite the
-      # same way the other lang repos do: re-run the binary and FAIL on
-      # any skip or zero passes (skip != pass), so a future skip-guard
-      # added to these tests can never turn the job vacuously green.
+      - name: Run functional e2e suite
+        run: |
+          # --no-tests=error: the functional gate must have compiled the
+          # suite (installed topo-cli present on the prefix); FAIL rather
+          # than green on zero tests.
+          ctest --test-dir build -L functional --output-on-failure --timeout 120 --no-tests=error
+
+      # The checker suite passes ctest even when its gtest cases skip —
+      # "Passed" can mean "every case skipped". Re-run the binaries via the
+      # shared assert script: strict mode keeps the aggregate guards
+      # (exit 0, >=1 pass, ZERO skips), and the NAMED anchor cases — the
+      # pyright-backed L2 deep-containment path — must additionally appear
+      # in the PASSED set. An ABSENT name means renamed / filtered / not
+      # compiled in; update the list together with the test, never weaken
+      # the pattern. The functional suite is re-run under the same
+      # aggregate guards (it carries no skip paths today).
       - name: Assert L2 deep containment ran (skip != pass)
         run: |
-          # set +e: handle errors explicitly — a grep no-match inside a
-          # command substitution would otherwise abort the step silently.
-          set +e
-          exe=$(find build -type f -name "topo-lang-python-check-tests" 2>/dev/null | head -1)
-          if [ -z "${exe}" ]; then
-            echo "::error::topo-lang-python-check-tests not built — topo-cli prefix missing at configure time?"; exit 1
-          fi
-          out=$("${exe}" 2>&1); rc=$?
-          printf '%s\n' "${out}" | tail -20
-          passed=$(printf '%s\n' "${out}" | grep -oE '\[  PASSED  \] [0-9]+ test' | grep -oE '[0-9]+' | tail -1)
-          skipped=$(printf '%s\n' "${out}" | grep -oE '\[  SKIPPED \] [0-9]+ test' | grep -oE '[0-9]+' | tail -1)
-          [ -z "${passed}" ] && passed=0
-          [ -z "${skipped}" ] && skipped=0
-          echo "topo-lang-python-check-tests: ${passed} PASSED, ${skipped} skipped (exit ${rc})"
-          if [ "${rc}" -ne 0 ]; then
-            echo "::error::checker-e2e suite failed (exit ${rc}) — pyright missing degrades the L2 verdict"; exit 1
-          fi
-          if [ "${skipped}" -gt 0 ] || [ "${passed}" -lt 1 ]; then
-            echo "::error::checker-e2e suite did not RUN its cases (skip != pass)"; exit 1
-          fi
+          bash .github/scripts/assert-live-cases.sh strict topo-lang-python-check-tests \
+            PythonContainment.DeepOsFile \
+            PythonContainment.DeepExternalOk \
+            PythonContainment.DeepWildcardImportOs \
+            PythonContainment.DeepClassPunning
+          bash .github/scripts/assert-live-cases.sh strict topo-lang-python-functional-tests
