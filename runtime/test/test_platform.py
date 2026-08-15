@@ -111,10 +111,20 @@ class ToolchainResolvesViaPlatformHelper(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as td:
             tdp = Path(td)
-            target = tdp / "topo-core" / "tools" / "topo" / "topo"
-            target.parent.mkdir(parents=True)
-            target.write_text("#!/bin/sh\nexit 0\n")
-            target.chmod(0o755)
+            if _platform.is_windows():
+                # is_executable on Windows requires a PATHEXT-matching
+                # suffix — the .exe-sibling probe is this test's Windows
+                # shape (the mocked variant is
+                # test_resolve_in_handles_windows_exe_suffix; this one runs
+                # against the real platform helper).
+                target = tdp / "topo-core" / "tools" / "topo" / "topo.exe"
+                target.parent.mkdir(parents=True)
+                target.write_bytes(b"MZ")
+            else:
+                target = tdp / "topo-core" / "tools" / "topo" / "topo"
+                target.parent.mkdir(parents=True)
+                target.write_text("#!/bin/sh\nexit 0\n")
+                target.chmod(0o755)
             hit = _toolchain._resolve_in(tdp, "topo-core/tools/topo/topo")
             self.assertEqual(hit, target)
 

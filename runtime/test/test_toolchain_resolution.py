@@ -28,6 +28,14 @@ _TOPO_REL = Path("topo-core") / "tools" / "topo" / "topo"
 
 def _stage_fake_topo(base: Path, rel) -> Path:
     """A regular file with the execute bit is all resolution stats for."""
+    if _platform.is_windows():
+        # is_executable on Windows requires a PATHEXT-matching suffix —
+        # stage a dummy .exe next to the bare name (the resolver probes
+        # the .exe sibling when the bare name is absent).
+        p = base / (rel + ".exe")
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b"MZ")
+        return p
     p = base / rel
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text("#!/bin/sh\nexit 0\n")
