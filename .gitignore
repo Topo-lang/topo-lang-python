@@ -36,5 +36,11 @@ Thumbs.db
 __pycache__/
 *.pyc
 
+# topo-check / topo-build caches — tests run against source-tree e2e
+# fixtures write these into the fixture dirs; keep them out of git wherever
+# they land (kind patterns, no per-fixture names).
+**/.topo-cache/
+**/.topo-check-cache
+
 # vcpkg
 vcpkg_installed/
